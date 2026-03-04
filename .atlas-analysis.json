@@ -1,0 +1,146 @@
+{
+  "projectType": "api-service",
+  "projectName": "DPM Delivery API",
+  "projectDescription": "A comprehensive delivery management platform API for handling bookings, shipments, rider assignments, and logistics operations.",
+  "theme": "aspen",
+  "primaryColor": "#2563eb",
+  "lightColor": "#3b82f6",
+  "darkColor": "#1e40af",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/user-roles",
+              "concepts/booking-workflow",
+              "concepts/shipment-tracking"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/environment-setup",
+              "guides/database-configuration",
+              "guides/integration-guide",
+              "guides/error-handling"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/signup",
+              "api/auth/login",
+              "api/auth/verify-account",
+              "api/auth/password-management"
+            ]
+          },
+          {
+            "group": "Bookings",
+            "pages": [
+              "api/bookings/overview",
+              "api/bookings/create",
+              "api/bookings/manage",
+              "api/bookings/ratings"
+            ]
+          },
+          {
+            "group": "Shipping",
+            "pages": [
+              "api/shipping/overview",
+              "api/shipping/create-shipment",
+              "api/shipping/track-shipment",
+              "api/shipping/rider-assignment",
+              "api/shipping/cost-management"
+            ]
+          },
+          {
+            "group": "Users & Riders",
+            "pages": [
+              "api/users/overview",
+              "api/users/management",
+              "api/riders/overview",
+              "api/riders/management"
+            ]
+          },
+          {
+            "group": "Places & Products",
+            "pages": [
+              "api/places/overview",
+              "api/places/management",
+              "api/products/overview",
+              "api/products/management",
+              "api/categories/overview"
+            ]
+          },
+          {
+            "group": "Payments & Wallets",
+            "pages": [
+              "api/payments/overview",
+              "api/payments/integration",
+              "api/wallets/overview",
+              "api/wallets/transactions"
+            ]
+          },
+          {
+            "group": "Additional Features",
+            "pages": [
+              "api/offers/overview",
+              "api/reviews/overview",
+              "api/analytics/overview",
+              "api/messages/overview"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "User authentication with role-based access control (Admin, User, Place Admin, Courier)",
+    "Booking management with status tracking and lifecycle management",
+    "Real-time shipment tracking and rider assignment",
+    "Multi-tenant place and product management",
+    "Integrated payment processing with Paystack",
+    "Digital wallet system for managing transactions",
+    "Rating and review system for service quality",
+    "Analytics and reporting for business insights",
+    "SMS notifications via Twilio integration",
+    "PDF invoice generation for bookings"
+  ],
+  "publicApiSurface": [
+    "POST /api/v1/auth/signup - User registration",
+    "POST /api/v1/auth/login - User authentication",
+    "GET /api/v1/auth/verify-account/:code - Account verification",
+    "POST /api/v1/bookings - Create new booking",
+    "GET /api/v1/bookings - List all bookings with filtering",
+    "PUT /api/v1/bookings/:id/confirm-booking - Confirm booking",
+    "POST /api/v1/shipping - Create shipment",
+    "GET /api/v1/shipping/reference/:reference - Track shipment by reference",
+    "PATCH /api/v1/shipping/:id/assign-rider/:riderId - Assign rider to shipment",
+    "PATCH /api/v1/shipping/:id/update-history - Update shipment status with photo",
+    "GET /api/v1/places - List all places",
+    "POST /api/v1/products - Create product",
+    "GET /api/v1/riders - List all riders",
+    "POST /api/v1/payment/initialize - Initialize payment",
+    "GET /api/v1/wallets - Get wallet information",
+    "POST /api/v1/offers - Create promotional offer",
+    "POST /api/v1/bookings/:id/rate - Rate a booking",
+    "GET /api/v1/analytics - Get analytics data"
+  ]
+}
