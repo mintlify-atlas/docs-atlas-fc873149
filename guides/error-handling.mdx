@@ -1,0 +1,691 @@
+---
+title: Error Handling
+description: Understand error responses, validation errors, and exception handling in the DPM Delivery API
+---
+
+## Overview
+
+The DPM Delivery API uses NestJS's built-in exception handling along with custom error messages and validation pipes to provide consistent, informative error responses.
+
+## Global Validation
+
+### Validation Pipe Configuration
+
+Global validation is configured in `src/main.ts` using class-validator:
+
+```typescript
+import { ValidationPipe } from '@nestjs/common';
+
+app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true,
+    transform: true,
+    forbidNonWhitelisted: true,
+    transformOptions: {
+      enableImplicitConversion: true,
+    },
+  }),
+);
+```
+
+### Configuration Options Explained
+
+<CardGroup cols={2}>
+  <Card title="whitelist" icon="filter">
+    Strips properties that don't have decorators in the DTO
+  </Card>
+  <Card title="transform" icon="wand-magic-sparkles">
+    Automatically transforms payloads to DTO instances
+  </Card>
+  <Card title="forbidNonWhitelisted" icon="ban">
+    Throws an error if non-whitelisted properties are present
+  </Card>
+  <Card title="enableImplicitConversion" icon="arrows-rotate">
+    Automatically converts primitive types (string to number, etc.)
+  </Card>
+</CardGroup>
+
+<Info>
+  These settings ensure that only validated, typed data reaches your route handlers, preventing common security vulnerabilities.
+</Info>
+
+## Validation DTOs
+
+### DTO Example
+
+Here's the `CreateBookingDto` from `src/bookings/dto/create-booking.dto.ts`:
+
+```typescript
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsArray,
+  IsInt,
+  IsNumber,
+  IsPhoneNumber,
+  IsString,
+} from 'class-validator';
+
+export class CreateBookingDto {
+  @IsString()
+  @ApiProperty()
+  place: string;
+
+  @IsArray()
+  @ApiPropertyOptional()
+  services: {
+    product: string;
+    quantity: number;
+    price: number;
+    place: string;
+  }[];
+
+  @IsInt()
+  @ApiPropertyOptional()
+  quantity: number;
+
+  @IsInt()
+  @ApiPropertyOptional()
+  delivery_fee: number;
+
+  @IsInt()
+  @ApiPropertyOptional()
+  price: number;
+
+  @IsInt()
+  @ApiPropertyOptional()
+  rider_tip: number;
+
+  @IsString()
+  @ApiProperty()
+  delivery_address: string;
+
+  @IsPhoneNumber('GH')
+  @ApiProperty()
+  recipient_phone: string;
+
+  @IsString()
+  @ApiProperty()
+  transaction_id: string;
+  
+  @IsString()
+  @ApiProperty()
+  request_id: string;
+
+  @IsInt()
+  @ApiPropertyOptional()
+  total_amount: number;
+}
+```
+
+### Common Validators
+
+<AccordionGroup>
+  <Accordion title="String Validators">
+    ```typescript
+    import { IsString, IsEmail, IsUrl, MinLength, MaxLength } from 'class-validator';
+
+    export class UserDto {
+      @IsString()
+      @MinLength(3)
+      @MaxLength(50)
+      name: string;
+
+      @IsEmail()
+      email: string;
+
+      @IsUrl()
+      website: string;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Number Validators">
+    ```typescript
+    import { IsInt, IsNumber, Min, Max, IsPositive } from 'class-validator';
+
+    export class PriceDto {
+      @IsNumber()
+      @IsPositive()
+      amount: number;
+
+      @IsInt()
+      @Min(1)
+      @Max(100)
+      quantity: number;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Phone Number Validator">
+    ```typescript
+    import { IsPhoneNumber } from 'class-validator';
+
+    export class ContactDto {
+      @IsPhoneNumber('GH') // Ghana phone numbers
+      phone: string;
+
+      @IsPhoneNumber() // Any country
+      internationalPhone: string;
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Array and Object Validators">
+    ```typescript
+    import { IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+    import { Type } from 'class-transformer';
+
+    class ItemDto {
+      @IsString()
+      name: string;
+
+      @IsNumber()
+      price: number;
+    }
+
+    export class OrderDto {
+      @IsArray()
+      @ArrayMinSize(1)
+      @ValidateNested({ each: true })
+      @Type(() => ItemDto)
+      items: ItemDto[];
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Error Response Format
+
+### Standard Error Response
+
+All errors follow NestJS's standard error format:
+
+```json
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "error": "Bad Request"
+}
+```
+
+### Validation Error Response
+
+Validation errors include detailed information:
+
+```json
+{
+  "statusCode": 400,
+  "message": [
+    "place must be a string",
+    "recipient_phone must be a valid phone number",
+    "delivery_address should not be empty"
+  ],
+  "error": "Bad Request"
+}
+```
+
+## Custom Error Messages
+
+The API uses a centralized error message system in `src/utils/errors.ts`:
+
+```typescript
+export const ERRORS = {
+  USER_NOT_FOUND_EMAIL: {
+    EN: 'User not found with this email address',
+  },
+  USER_NOT_FOUND_PHONE: {
+    EN: 'This phone number does not belong to any account',
+  },
+  INVALID_PASSWORD: {
+    EN: 'The password you provided is invalid',
+  },
+  PHONE_ALREADY_TAKEN: {
+    EN: 'Another user is already using this phone number',
+  },
+  EMAIL_ALREADY_TAKEN: {
+    EN: 'Another user is already using this email address',
+  },
+  INVALID_CODE: {
+    EN: 'The code your provided code is invalid',
+  },
+  CODE_EXPIRED: {
+    EN: 'Code has expired, please request for a new one',
+  },
+  CATEGORIES: {
+    NOT_FOUND: 'Category not found',
+    ALREADY_EXIST: 'Category name already exist',
+  },
+  PLACES: {
+    NOT_FOUND: 'Place not found',
+    ALREADY_EXIST: 'Place name already exist',
+    NOT_EMPTY: 'Place cannot be empty',
+  },
+  PRODUCTS: {
+    NOT_FOUND: {
+      EN: 'product not found',
+    },
+    NOT_EMPTY: {
+      EN: 'product cannot be empty',
+    },
+  },
+  PAYMENT_TYPE: {
+    EXIST: {
+      EN: 'Payment type with this name already exists',
+    },
+    DOES_NOT_EXIST: {
+      EN: "payment type doesn't exist",
+    },
+  },
+  PAYMENT_METHOD: {
+    DOES_NOT_EXIST: {
+      EN: "payment method doesn't exist",
+    },
+  },
+  BOOKINGS: {
+    NOT_FOUND: {
+      EN: 'booking not found',
+    },
+    UNAUTHORIZED: {
+      EN: 'Unauthorized!!, you cannot access this booking',
+    },
+    ALREADY_RATED: {
+      EN: 'You have already rated this place',
+    },
+  },
+  REVIEWS: {
+    NOT_FOUND: {
+      EN: 'Review not found',
+    },
+    NOT_YOURS: {
+      EN: 'You cannot delete this review',
+    },
+  },
+  RIDER: {
+    NOT_FOUND: {
+      EN: 'Rider not found',
+    },
+  },
+  UNAUTHORIZED: {
+    EN: 'Unauthorized!!',
+  },
+};
+```
+
+### Using Custom Errors
+
+<CodeGroup>
+
+```typescript Throw Custom Error
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ERRORS } from 'src/utils/errors';
+
+@Injectable()
+export class BookingsService {
+  async findOne(id: string) {
+    const booking = await this.bookingRepository.findOne({ 
+      where: { id } 
+    });
+    
+    if (!booking) {
+      throw new NotFoundException(ERRORS.BOOKINGS.NOT_FOUND.EN);
+    }
+    
+    return booking;
+  }
+  
+  async rateBooking(userId: string, bookingId: string, rating: number) {
+    const booking = await this.findOne(bookingId);
+    
+    if (booking.user.id !== userId) {
+      throw new BadRequestException(ERRORS.BOOKINGS.UNAUTHORIZED.EN);
+    }
+    
+    if (booking.rated) {
+      throw new BadRequestException(ERRORS.BOOKINGS.ALREADY_RATED.EN);
+    }
+    
+    // Process rating...
+  }
+}
+```
+
+```typescript Payment Errors
+import { 
+  BadRequestException, 
+  InternalServerErrorException 
+} from '@nestjs/common';
+import { ERRORS } from 'src/utils/errors';
+
+@Injectable()
+export class PaymentService {
+  async verifyMobileMoneyAccount(
+    accountNumber: string,
+    provider: MobileMoneyProvider,
+  ) {
+    const bankCode = MOBILE_MONEY_CODES[provider];
+
+    if (!bankCode) {
+      throw new BadRequestException(
+        ERRORS.PAYMENT_METHOD.DOES_NOT_EXIST.EN
+      );
+    }
+
+    try {
+      // Verification logic...
+    } catch (error: any) {
+      throw new InternalServerErrorException(error.message);
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+## HTTP Exception Types
+
+NestJS provides several built-in HTTP exception classes:
+
+<Steps>
+  <Step title="Client Errors (4xx)">
+    ```typescript
+    import {
+      BadRequestException,        // 400
+      UnauthorizedException,      // 401
+      ForbiddenException,         // 403
+      NotFoundException,          // 404
+      ConflictException,          // 409
+      UnprocessableEntityException, // 422
+    } from '@nestjs/common';
+    ```
+  </Step>
+
+  <Step title="Server Errors (5xx)">
+    ```typescript
+    import {
+      InternalServerErrorException, // 500
+      NotImplementedException,      // 501
+      BadGatewayException,          // 502
+      ServiceUnavailableException,  // 503
+      GatewayTimeoutException,      // 504
+    } from '@nestjs/common';
+    ```
+  </Step>
+</Steps>
+
+## Error Handling Examples
+
+### Handle Not Found
+
+```typescript
+@Get(':id')
+async findOne(@Param('id') id: string) {
+  const place = await this.placesService.findOne(id);
+  
+  if (!place) {
+    throw new NotFoundException(ERRORS.PLACES.NOT_FOUND);
+  }
+  
+  return place;
+}
+```
+
+### Handle Duplicate Entry
+
+```typescript
+@Post()
+async create(@Body() createUserDto: CreateUserDto) {
+  const existingUser = await this.usersService.findByEmail(
+    createUserDto.email
+  );
+  
+  if (existingUser) {
+    throw new ConflictException(ERRORS.EMAIL_ALREADY_TAKEN.EN);
+  }
+  
+  return this.usersService.create(createUserDto);
+}
+```
+
+### Handle Authorization
+
+```typescript
+@Delete(':id')
+async remove(
+  @Param('id') id: string,
+  @CurrentUser() user: User,
+) {
+  const review = await this.reviewsService.findOne(id);
+  
+  if (!review) {
+    throw new NotFoundException(ERRORS.REVIEWS.NOT_FOUND.EN);
+  }
+  
+  if (review.user.id !== user.id) {
+    throw new ForbiddenException(ERRORS.REVIEWS.NOT_YOURS.EN);
+  }
+  
+  return this.reviewsService.remove(id);
+}
+```
+
+### Try-Catch for External APIs
+
+```typescript
+async checkPaymentStatus(transactionId: string) {
+  try {
+    const response = await axios.post(
+      externalApis.payment.checkStatus(),
+      { transactionId },
+      { headers: { appId: this.appId } }
+    );
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      throw new NotFoundException('Transaction not found');
+    }
+    if (error.response?.status >= 500) {
+      throw new BadGatewayException('Payment service unavailable');
+    }
+    throw new InternalServerErrorException(
+      'Failed to check payment status'
+    );
+  }
+}
+```
+
+## Validation Error Examples
+
+### Request with Invalid Data
+
+<CodeGroup>
+
+```json Request
+POST /api/v1/bookings
+Content-Type: application/json
+
+{
+  "place": "",
+  "recipient_phone": "invalid",
+  "delivery_address": "",
+  "total_amount": "not-a-number"
+}
+```
+
+```json Response
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "statusCode": 400,
+  "message": [
+    "place should not be empty",
+    "recipient_phone must be a valid phone number",
+    "delivery_address should not be empty",
+    "total_amount must be an integer number"
+  ],
+  "error": "Bad Request"
+}
+```
+
+</CodeGroup>
+
+### Request with Extra Fields
+
+With `forbidNonWhitelisted: true`, extra fields are rejected:
+
+<CodeGroup>
+
+```json Request
+POST /api/v1/users
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "maliciousField": "hack attempt"
+}
+```
+
+```json Response
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+
+{
+  "statusCode": 400,
+  "message": [
+    "property maliciousField should not exist"
+  ],
+  "error": "Bad Request"
+}
+```
+
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Specific Exception Types">
+    Choose the most appropriate exception type for the error:
+
+    ```typescript
+    // Good
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.id !== currentUser.id) {
+      throw new ForbiddenException('Cannot access this resource');
+    }
+
+    // Avoid
+    if (!user) {
+      throw new BadRequestException('User not found'); // Wrong type
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use Centralized Error Messages">
+    Always use error messages from `ERRORS` constant:
+
+    ```typescript
+    // Good
+    throw new NotFoundException(ERRORS.BOOKINGS.NOT_FOUND.EN);
+
+    // Avoid
+    throw new NotFoundException('Booking not found'); // Hardcoded
+    ```
+  </Accordion>
+
+  <Accordion title="Validate Early">
+    Use DTOs and validation pipes to catch errors early:
+
+    ```typescript
+    // Good - validation happens automatically
+    @Post()
+    async create(@Body() dto: CreateBookingDto) {
+      return this.service.create(dto);
+    }
+
+    // Avoid - manual validation in service
+    async create(data: any) {
+      if (!data.place) throw new BadRequestException(...);
+      if (!data.phone) throw new BadRequestException(...);
+      // ...
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Log Internal Errors">
+    Always log internal errors before throwing:
+
+    ```typescript
+    try {
+      await externalService.call();
+    } catch (error) {
+      console.error('External service error:', error);
+      throw new InternalServerErrorException(
+        'Service temporarily unavailable'
+      );
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Don't Expose Sensitive Information">
+    Never expose internal details or secrets in error messages:
+
+    ```typescript
+    // Good
+    throw new UnauthorizedException('Invalid credentials');
+
+    // Avoid
+    throw new UnauthorizedException(
+      `Database connection failed: ${dbError.connectionString}`
+    );
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Error Handling
+
+### Unit Test Example
+
+```typescript
+import { NotFoundException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { BookingsService } from './bookings.service';
+import { ERRORS } from 'src/utils/errors';
+
+describe('BookingsService', () => {
+  let service: BookingsService;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [BookingsService],
+    }).compile();
+
+    service = module.get<BookingsService>(BookingsService);
+  });
+
+  describe('findOne', () => {
+    it('should throw NotFoundException when booking does not exist', async () => {
+      jest.spyOn(service, 'findOne').mockRejectedValue(
+        new NotFoundException(ERRORS.BOOKINGS.NOT_FOUND.EN)
+      );
+
+      await expect(service.findOne('invalid-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api/auth/signup">
+    Explore all available API endpoints
+  </Card>
+  <Card title="Authentication" icon="shield" href="/authentication">
+    Learn about JWT authentication and authorization
+  </Card>
+</CardGroup>

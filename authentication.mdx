@@ -1,0 +1,614 @@
+---
+title: Authentication
+description: Comprehensive guide to authentication and authorization in the DPM Delivery API, including JWT tokens, role-based access control, and security best practices.
+---
+
+## Overview
+
+The DPM Delivery API uses **JWT (JSON Web Tokens)** for authentication and **role-based access control (RBAC)** for authorization. This ensures secure access to protected resources while maintaining flexibility for different user types.
+
+## Authentication Flow
+
+<Steps>
+  <Step title="User Registration">
+    Create a new user account with phone number and password.
+  </Step>
+  
+  <Step title="Account Verification">
+    Verify the account using the SMS verification code (optional, based on configuration).
+  </Step>
+  
+  <Step title="Login">
+    Authenticate with phone number and password to receive a JWT access token.
+  </Step>
+  
+  <Step title="Access Protected Routes">
+    Include the JWT token in the Authorization header for all protected endpoints.
+  </Step>
+</Steps>
+
+## User Roles
+
+The API supports four distinct user roles, each with specific permissions:
+
+<CardGroup cols={2}>
+  <Card title="Admin" icon="shield-halved">
+    **Super Administrator** - Full system access, can manage all resources, users, and configurations.
+  </Card>
+  
+  <Card title="User" icon="user">
+    **End User** - Can create bookings, track shipments, and manage their own account.
+  </Card>
+  
+  <Card title="Place Admin" icon="building">
+    **Location Manager** - Manages bookings and operations for a specific location or place.
+  </Card>
+  
+  <Card title="Rider" icon="motorcycle">
+    **Delivery Courier** - Can view assigned deliveries, update shipment status, and manage delivery tasks.
+  </Card>
+</CardGroup>
+
+## Registration
+
+### Create a User Account
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:8080/api/v1/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullName": "Jane Smith",
+    "phone": "+233241234567",
+    "password": "SecureP@ssw0rd"
+  }'
+```
+
+```javascript JavaScript
+const createUser = async () => {
+  const response = await fetch('http://localhost:8080/api/v1/auth/signup', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fullName: 'Jane Smith',
+      phone: '+233241234567',
+      password: 'SecureP@ssw0rd'
+    })
+  });
+  
+  const user = await response.json();
+  return user;
+};
+```
+
+```python Python
+import requests
+
+def create_user():
+    url = 'http://localhost:8080/api/v1/auth/signup'
+    payload = {
+        'fullName': 'Jane Smith',
+        'phone': '+233241234567',
+        'password': 'SecureP@ssw0rd'
+    }
+    
+    response = requests.post(url, json=payload)
+    return response.json()
+```
+</CodeGroup>
+
+### Request Body Validation
+
+The signup endpoint uses strict validation with the following DTO:
+
+```typescript Source: src/users/dto/create-user.dto.ts
+export class CreateUserDto {
+  @ApiProperty()
+  @IsString()
+  fullName: string;
+  
+  @ApiProperty()
+  @IsString()
+  phone: string;
+  
+  @ApiProperty()
+  @IsString()
+  password: string;
+}
+```
+
+<Warning>
+  All request bodies are validated using `class-validator`. The API is configured with:
+  - `whitelist: true` - Strips properties not defined in the DTO
+  - `forbidNonWhitelisted: true` - Throws error if extra properties are provided
+  - `transform: true` - Automatically transforms payloads to DTO instances
+</Warning>
+
+## Login
+
+Authenticate and receive a JWT access token:
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "+233241234567",
+    "password": "SecureP@ssw0rd"
+  }'
+```
+
+```javascript JavaScript
+const login = async (phone, password) => {
+  const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ phone, password })
+  });
+  
+  const { user, accessToken } = await response.json();
+  
+  // Store the token securely
+  sessionStorage.setItem('accessToken', accessToken);
+  
+  return { user, accessToken };
+};
+```
+
+```python Python
+import requests
+
+def login(phone, password):
+    url = 'http://localhost:8080/api/v1/auth/login'
+    payload = {'phone': phone, 'password': password}
+    
+    response = requests.post(url, json=payload)
+    data = response.json()
+    
+    return {
+        'user': data['user'],
+        'access_token': data['accessToken']
+    }
+```
+</CodeGroup>
+
+### Login DTO Validation
+
+The login endpoint validates credentials using:
+
+```typescript Source: src/auth/dto/login.dto.ts
+export class LoginDto {
+  @ApiProperty()
+  @IsString()
+  @IsPhoneNumber('GH')  // Validates Ghana phone number format
+  phone: string;
+  
+  @ApiProperty()
+  @IsString()
+  password: string;
+}
+```
+
+<Info>
+  Phone numbers must be valid Ghana numbers (format: +233XXXXXXXXX). The API uses the `@IsPhoneNumber('GH')` decorator for validation.
+</Info>
+
+### Response
+
+```json
+{
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "fullName": "Jane Smith",
+    "phone": "+233241234567",
+    "isVerified": true,
+    "role": {
+      "name": "User"
+    },
+    "createdAt": "2024-03-15T10:30:00Z"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsImZ1bGxOYW1lIjoiSmFuZSBTbWl0aCIsInBob25lIjoiKzIzMzI0MTIzNDU2NyIsImlhdCI6MTYzOTU2MjQwMH0.signature"
+}
+```
+
+## Making Authenticated Requests
+
+Include the JWT token in the `Authorization` header using the Bearer scheme:
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:8080/api/v1/shipping \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+```javascript JavaScript
+const getShipments = async (accessToken) => {
+  const response = await fetch('http://localhost:8080/api/v1/shipping', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    }
+  });
+  
+  return await response.json();
+};
+```
+
+```python Python
+import requests
+
+def get_shipments(access_token):
+    url = 'http://localhost:8080/api/v1/shipping'
+    headers = {
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+    
+    response = requests.get(url, headers=headers)
+    return response.json()
+```
+</CodeGroup>
+
+## JWT Authentication Guard
+
+The API uses a custom JWT authentication guard to protect routes:
+
+```typescript Source: src/auth/guards/jwtAuth.guard.ts
+@Injectable()
+export class JwtAuthGuard implements CanActivate {
+  constructor(
+    private jwtService: JwtService,
+    private configService: ConfigService,
+    private userService: UsersService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const token = this.extractTokenFromHeader(request);
+    
+    if (!token) {
+      throw new UnauthorizedException();
+    }
+    
+    try {
+      // Verify JWT token
+      const payload = await this.jwtService.verifyAsync(token, {
+        secret: this.configService.get('JWT_SECRET'),
+      });
+
+      // Fetch user from database
+      const user = await this.userService.findUserByPhone(payload?.phone);
+      
+      // Attach user to request
+      request['user'] = user;
+    } catch {
+      throw new UnauthorizedException();
+    }
+    
+    return true;
+  }
+
+  private extractTokenFromHeader(request: Request): string | undefined {
+    const [type, token] = request.headers.authorization?.split(' ') ?? [];
+    return type === 'Bearer' ? token : undefined;
+  }
+}
+```
+
+### How It Works:
+
+1. Extracts the Bearer token from the `Authorization` header
+2. Verifies the token using the `JWT_SECRET` from environment variables
+3. Fetches the user from the database using the phone number from the token payload
+4. Attaches the user object to the request for use in route handlers
+5. Throws `UnauthorizedException` if any step fails
+
+## Role-Based Access Control
+
+The API implements RBAC using decorators and guards:
+
+### Roles Decorator
+
+```typescript Source: src/auth/decorators/roles.decorator.ts
+import { SetMetadata } from '@nestjs/common';
+import { UserRoles } from 'src/utils/enums';
+
+export const hasRoles = (...hasRoles: UserRoles[]) =>
+  SetMetadata('roles', hasRoles);
+```
+
+### Roles Guard
+
+```typescript Source: src/auth/guards/roles.guard.ts
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+  
+  canActivate(context: ExecutionContext): boolean {
+    const roles = this.reflector.get<UserRoles[]>(
+      'roles',
+      context.getHandler(),
+    );
+    
+    if (!roles) {
+      return true;
+    }
+    
+    const user: User = context.switchToHttp().getRequest().user;
+    
+    return roles.some((role) => user.role?.name === role);
+  }
+}
+```
+
+### Using Guards in Controllers
+
+Here's how authentication and authorization are applied in practice:
+
+<Tabs>
+  <Tab title="Admin Only">
+    ```typescript Source: src/shipping/shipping.controller.ts
+    @Get()
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @hasRoles(UserRoles.ADMIN, UserRoles.COURIER)
+    async findAll(@Query() query: FindAllShipmentDto, @currentUser() user: User) {
+      return this.shippingService.findAll(query, user);
+    }
+    ```
+    
+    This endpoint requires:
+    - Valid JWT token (`JwtAuthGuard`)
+    - User must be Admin or Courier (`RolesGuard` + `@hasRoles`)
+  </Tab>
+  
+  <Tab title="User Only">
+    ```typescript Source: src/bookings/bookings.controller.ts
+    @Post()
+    @ApiBearerAuth()
+    @hasRoles(UserRoles.USER)
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    create(
+      @Body() createBookingDto: CreateBookingDto,
+      @currentUser() user: User,
+    ) {
+      return this.bookingsService.create(createBookingDto, user);
+    }
+    ```
+    
+    This endpoint is restricted to users with the `User` role only.
+  </Tab>
+  
+  <Tab title="Multiple Roles">
+    ```typescript Source: src/auth/auth.controller.ts
+    @Put('change-password')
+    @ApiBearerAuth()
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @hasRoles(UserRoles.ADMIN)
+    changePassword(@Body() body: ChangePasswordDto) {
+      return this.authService.changeUserPasswordAdmin(body);
+    }
+    ```
+    
+    Admins can change any user's password, while riders have a separate endpoint for changing their own default password.
+  </Tab>
+</Tabs>
+
+### Current User Decorator
+
+Access the authenticated user in your route handlers:
+
+```typescript Source: src/auth/decorators/currentUser.decorator.ts
+import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+
+export const currentUser = createParamDecorator(
+  (data: unknown, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+  },
+);
+```
+
+**Usage:**
+```typescript
+@Get('profile')
+@UseGuards(JwtAuthGuard)
+getProfile(@currentUser() user: User) {
+  return user;
+}
+```
+
+## Password Management
+
+### Forgot Password
+
+Request a password reset code via SMS:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/forgotPassword \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "+233241234567"
+  }'
+```
+
+### Reset Password
+
+Reset password using the SMS code:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/resetPassword/{code} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "newPassword": "NewSecureP@ssw0rd",
+    "confirmPassword": "NewSecureP@ssw0rd"
+  }'
+```
+
+### Change Default Password (Riders)
+
+Riders are assigned a default password and must change it on first login:
+
+```bash
+curl -X PUT http://localhost:8080/api/v1/auth/change-default-password \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "oldPassword": "default_password",
+    "newPassword": "MyNewP@ssw0rd"
+  }'
+```
+
+<Note>
+  This endpoint is restricted to users with the `Rider` role and uses the `@hasRoles(UserRoles.COURIER)` decorator.
+</Note>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Store Tokens Securely" icon="key">
+    - Never store tokens in localStorage for sensitive applications
+    - Use httpOnly cookies or secure session storage
+    - Implement token refresh mechanisms
+  </Card>
+  
+  <Card title="Use HTTPS" icon="lock">
+    - Always use HTTPS in production
+    - Enable CORS with specific origins
+    - The API has CORS enabled via `app.enableCors()`
+  </Card>
+  
+  <Card title="Strong Passwords" icon="shield">
+    - Passwords are hashed using bcrypt (10 salt rounds)
+    - Enforce password complexity on the client side
+    - Implement password strength validation
+  </Card>
+  
+  <Card title="Token Expiration" icon="clock">
+    - Implement token refresh logic
+    - Handle 401 Unauthorized responses gracefully
+    - Re-authenticate when tokens expire
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+### Common Authentication Errors
+
+<AccordionGroup>
+  <Accordion title="401 Unauthorized">
+    **Cause:** Invalid or expired JWT token, or no token provided.
+    
+    **Solution:**
+    - Ensure the token is included in the Authorization header
+    - Verify the token hasn't expired
+    - Login again to get a fresh token
+    
+    ```json
+    {
+      "statusCode": 401,
+      "message": "Unauthorized"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="403 Forbidden">
+    **Cause:** User doesn't have the required role to access the endpoint.
+    
+    **Solution:**
+    - Verify your user role matches the endpoint requirements
+    - Contact an administrator if you need role changes
+    
+    ```json
+    {
+      "statusCode": 403,
+      "message": "Forbidden resource"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="400 Bad Request - Invalid Password">
+    **Cause:** Incorrect password during login.
+    
+    **Solution:**
+    - Verify the password is correct
+    - Use the forgot password flow if needed
+    
+    ```json
+    {
+      "statusCode": 400,
+      "message": "Invalid password"
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="400 Bad Request - Validation Failed">
+    **Cause:** Request body doesn't match the expected DTO format.
+    
+    **Solution:**
+    - Check that all required fields are present
+    - Ensure phone numbers are in valid Ghana format (+233XXXXXXXXX)
+    - Remove any extra properties not defined in the DTO
+    
+    ```json
+    {
+      "statusCode": 400,
+      "message": [
+        "phone must be a valid phone number",
+        "password should not be empty"
+      ],
+      "error": "Bad Request"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Authentication
+
+You can test all authentication endpoints using the Swagger UI:
+
+```
+http://localhost:8080/api/v1/doc
+```
+
+<Steps>
+  <Step title="Navigate to Swagger UI">
+    Open your browser and go to the API documentation page.
+  </Step>
+  
+  <Step title="Authenticate">
+    1. Click the "Authorize" button (lock icon)
+    2. Enter your JWT token in the format: `Bearer {your-token}`
+    3. Click "Authorize" to save
+  </Step>
+  
+  <Step title="Test Endpoints">
+    All protected endpoints will now include your authorization token automatically.
+  </Step>
+</Steps>
+
+<Info>
+  The Swagger configuration includes `persistAuthorization: true`, so your token will persist across page refreshes during development.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api/auth/signup">
+    Explore all available endpoints and their authentication requirements
+  </Card>
+  <Card title="User Roles" icon="users" href="/concepts/user-roles">
+    Detailed breakdown of permissions for each role
+  </Card>
+  <Card title="Error Codes" icon="circle-exclamation" href="/guides/error-handling">
+    Complete reference of error codes and messages
+  </Card>
+  <Card title="Best Practices" icon="star" href="/guides/error-handling">
+    Security guidelines and recommended patterns
+  </Card>
+</CardGroup>

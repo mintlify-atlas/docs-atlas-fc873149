@@ -1,0 +1,552 @@
+---
+title: 'Rider Management'
+description: 'Create, update, and manage delivery riders with vehicle and identification verification'
+---
+
+## Create Rider
+
+<api-endpoint method="POST" path="/rider" />
+
+Create a new rider account with vehicle and identification information. This endpoint creates both a user account with the COURIER role and the associated rider profile.
+
+**Authentication:** Required
+
+**Role Required:** Admin
+
+**Content-Type:** `multipart/form-data` (required for file uploads)
+
+### Body Parameters
+
+#### User Information
+
+<ParamField body="fullName" type="string" required>
+  Rider's full name
+</ParamField>
+
+<ParamField body="phone" type="string" required>
+  Rider's phone number
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Rider's email address (required for riders, unlike regular users)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Initial password for the rider account (will be marked as default password)
+</ParamField>
+
+<ParamField body="profilePicture" type="file">
+  Rider's profile photo (optional, image file)
+</ParamField>
+
+#### Vehicle Information
+
+<ParamField body="bikeRegistrationNumber" type="string" required>
+  Vehicle registration/license plate number
+</ParamField>
+
+<ParamField body="bikeType" type="string" required>
+  Type of delivery vehicle (e.g., "Bike", "Aboboyaa", "Van")
+</ParamField>
+
+<ParamField body="bikeColor" type="string" required>
+  Vehicle color
+</ParamField>
+
+<ParamField body="bikeBrand" type="string" required>
+  Vehicle manufacturer/brand (e.g., "Honda", "Yamaha")
+</ParamField>
+
+<ParamField body="bikeModel" type="string" required>
+  Vehicle model
+</ParamField>
+
+<ParamField body="bikeYear" type="number" required>
+  Vehicle manufacturing year (e.g., 2020)
+</ParamField>
+
+<ParamField body="bikeImage" type="file" required>
+  Photo of the vehicle (image file)
+</ParamField>
+
+#### Identification Documents
+
+<ParamField body="identificationDocumentNumber" type="string" required>
+  ID document number (driver's license, national ID, etc.)
+</ParamField>
+
+<ParamField body="identificationDocumentType" type="string" required>
+  Type of ID document (e.g., "Driver's License", "National ID")
+</ParamField>
+
+<ParamField body="documentExpiryDate" type="string (ISO 8601)" required>
+  Document expiration date (format: YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="identificationDocumentImage" type="file" required>
+  Photo of the identification document (image file)
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST "https://api.dpm.com/rider" \
+  -H "Authorization: Bearer <admin_token>" \
+  -F "fullName=Kwame Mensah" \
+  -F "phone=+233501234567" \
+  -F "email=kwame.mensah@example.com" \
+  -F "password=TempPassword123" \
+  -F "bikeRegistrationNumber=GH-1234-20" \
+  -F "bikeType=Bike" \
+  -F "bikeColor=Red" \
+  -F "bikeBrand=Honda" \
+  -F "bikeModel=CB125F" \
+  -F "bikeYear=2022" \
+  -F "identificationDocumentType=Driver's License" \
+  -F "identificationDocumentNumber=DL-456789" \
+  -F "documentExpiryDate=2026-12-31" \
+  -F "bikeImage=@/path/to/bike-photo.jpg" \
+  -F "identificationDocumentImage=@/path/to/license.jpg" \
+  -F "profilePicture=@/path/to/profile.jpg"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "user": {
+    "id": "rider-user-id-123",
+    "phone": "+233501234567",
+    "email": "kwame.mensah@example.com",
+    "fullName": "Kwame Mensah",
+    "isVerified": false,
+    "isDefaultPassword": true,
+    "profilePicture": "https://cdn.example.com/profiles/kwame.jpg",
+    "role": {
+      "id": 4,
+      "name": "Rider"
+    },
+    "createdAt": "2024-03-04T10:30:00Z"
+  },
+  "rider": {
+    "id": "rider-id-456",
+    "riderId": "rider-user-id-123",
+    "bikeRegistrationNumber": "GH-1234-20",
+    "bikeType": "Bike",
+    "bikeColor": "Red",
+    "bikeBrand": "Honda",
+    "bikeModel": "CB125F",
+    "bikeYear": 2022,
+    "bikeImage": "https://cdn.example.com/vehicles/bike-123.jpg",
+    "identificationDocumentNumber": "DL-456789",
+    "identificationDocumentType": "Driver's License",
+    "identificationDocumentImage": "https://cdn.example.com/documents/license-456.jpg",
+    "documentExpiryDate": "2026-12-31T00:00:00Z",
+    "createdAt": "2024-03-04T10:30:00Z"
+  },
+  "defaultPassword": "TempPassword123",
+  "message": "Rider account created successfully. Please share the credentials with the rider."
+}
+```
+</ResponseExample>
+
+<Warning>
+  The default password is returned in the response. Ensure this is communicated securely to the rider and advise them to change it immediately upon first login.
+</Warning>
+
+---
+
+## Update Rider
+
+<api-endpoint method="PUT" path="/rider/:id" />
+
+Update an existing rider's information including vehicle and document details.
+
+**Authentication:** Required
+
+**Role Required:** Admin
+
+**Content-Type:** `multipart/form-data` (supports file uploads)
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The rider's user ID to update
+</ParamField>
+
+### Body Parameters
+
+All fields are optional. Only include fields you want to update.
+
+<ParamField body="bikeRegistrationNumber" type="string">
+  Vehicle registration/license plate number
+</ParamField>
+
+<ParamField body="bikeType" type="string">
+  Type of delivery vehicle
+</ParamField>
+
+<ParamField body="bikeColor" type="string">
+  Vehicle color
+</ParamField>
+
+<ParamField body="bikeBrand" type="string">
+  Vehicle manufacturer/brand
+</ParamField>
+
+<ParamField body="bikeModel" type="string">
+  Vehicle model
+</ParamField>
+
+<ParamField body="bikeYear" type="number">
+  Vehicle manufacturing year
+</ParamField>
+
+<ParamField body="bikeImage" type="file">
+  Updated photo of the vehicle
+</ParamField>
+
+<ParamField body="identificationDocumentNumber" type="string">
+  ID document number
+</ParamField>
+
+<ParamField body="identificationDocumentType" type="string">
+  Type of ID document
+</ParamField>
+
+<ParamField body="documentExpiryDate" type="string (ISO 8601)">
+  Document expiration date
+</ParamField>
+
+<ParamField body="identificationDocumentImage" type="file">
+  Updated photo of identification document
+</ParamField>
+
+<ParamField body="profilePicture" type="file">
+  Updated profile photo
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X PUT "https://api.dpm.com/rider/rider-user-id-123" \
+  -H "Authorization: Bearer <admin_token>" \
+  -F "bikeRegistrationNumber=GH-5678-21" \
+  -F "bikeColor=Blue" \
+  -F "documentExpiryDate=2027-12-31"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "user": {
+    "id": "rider-user-id-123",
+    "phone": "+233501234567",
+    "email": "kwame.mensah@example.com",
+    "fullName": "Kwame Mensah",
+    "role": {
+      "name": "Rider"
+    },
+    "updatedAt": "2024-03-04T14:30:00Z"
+  },
+  "rider": {
+    "id": "rider-id-456",
+    "bikeRegistrationNumber": "GH-5678-21",
+    "bikeColor": "Blue",
+    "documentExpiryDate": "2027-12-31T00:00:00Z",
+    "updatedAt": "2024-03-04T14:30:00Z"
+  },
+  "message": "Rider information updated successfully"
+}
+```
+</ResponseExample>
+
+---
+
+## List All Riders
+
+<api-endpoint method="GET" path="/rider" />
+
+Retrieve a paginated list of all riders in the system.
+
+**Authentication:** Required
+
+**Role Required:** Admin
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Number of riders per page
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.dpm.com/rider?page=1&limit=20" \
+  -H "Authorization: Bearer <admin_token>"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "data": [
+    {
+      "id": "rider-user-id-123",
+      "fullName": "Kwame Mensah",
+      "phone": "+233501234567",
+      "email": "kwame.mensah@example.com",
+      "profilePicture": "https://cdn.example.com/profiles/kwame.jpg",
+      "isDefaultPassword": false,
+      "rider": {
+        "id": "rider-id-456",
+        "bikeType": "Bike",
+        "bikeRegistrationNumber": "GH-5678-21",
+        "bikeBrand": "Honda",
+        "bikeModel": "CB125F",
+        "bikeColor": "Blue",
+        "bikeYear": 2022,
+        "bikeImage": "https://cdn.example.com/vehicles/bike-123.jpg",
+        "identificationDocumentType": "Driver's License",
+        "documentExpiryDate": "2027-12-31T00:00:00Z"
+      },
+      "createdAt": "2024-03-04T10:30:00Z"
+    }
+  ],
+  "total": 45,
+  "page": 1,
+  "limit": 20,
+  "totalPages": 3
+}
+```
+</ResponseExample>
+
+---
+
+## Get Rider by ID
+
+<api-endpoint method="GET" path="/rider/:id" />
+
+Retrieve detailed information about a specific rider.
+
+**Authentication:** Not required (public endpoint)
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The rider's user ID
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.dpm.com/rider/rider-user-id-123"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "id": "rider-user-id-123",
+  "fullName": "Kwame Mensah",
+  "phone": "+233501234567",
+  "email": "kwame.mensah@example.com",
+  "profilePicture": "https://cdn.example.com/profiles/kwame.jpg",
+  "isVerified": true,
+  "role": {
+    "id": 4,
+    "name": "Rider"
+  },
+  "rider": {
+    "id": "rider-id-456",
+    "riderId": "rider-user-id-123",
+    "bikeRegistrationNumber": "GH-5678-21",
+    "bikeType": "Bike",
+    "bikeColor": "Blue",
+    "bikeBrand": "Honda",
+    "bikeModel": "CB125F",
+    "bikeYear": 2022,
+    "bikeImage": "https://cdn.example.com/vehicles/bike-123.jpg",
+    "identificationDocumentNumber": "DL-456789",
+    "identificationDocumentType": "Driver's License",
+    "identificationDocumentImage": "https://cdn.example.com/documents/license-456.jpg",
+    "documentExpiryDate": "2027-12-31T00:00:00Z"
+  },
+  "wallet": {
+    "id": "wallet-id-789",
+    "balance": 450.00,
+    "currency": "GHS"
+  },
+  "createdAt": "2024-03-04T10:30:00Z",
+  "updatedAt": "2024-03-04T14:30:00Z"
+}
+```
+</ResponseExample>
+
+<Note>
+  Sensitive fields like password are never included in responses. Document images and bike images return URLs, not the raw files.
+</Note>
+
+---
+
+## Get Rider Statistics
+
+<api-endpoint method="GET" path="/rider/:id/stats" />
+
+Retrieve performance statistics for a specific rider. Riders can only view their own statistics.
+
+**Authentication:** Required
+
+**Role Required:** Courier (the rider must be requesting their own stats)
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The rider's user ID
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.dpm.com/rider/rider-user-id-123/stats" \
+  -H "Authorization: Bearer <rider_token>"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "riderId": "rider-user-id-123",
+  "totalDeliveries": 145,
+  "completedDeliveries": 138,
+  "pendingDeliveries": 3,
+  "failedDeliveries": 4,
+  "totalEarnings": 4350.00,
+  "currentMonthEarnings": 680.00,
+  "averageDeliveryTime": 28.5,
+  "successRate": 95.2,
+  "rating": 4.7,
+  "totalRatings": 89,
+  "activeAssignments": 2,
+  "currency": "GHS",
+  "period": {
+    "start": "2024-01-01T00:00:00Z",
+    "end": "2024-03-04T23:59:59Z"
+  }
+}
+```
+</ResponseExample>
+
+<ResponseField name="totalDeliveries" type="number">
+  Total number of delivery assignments
+</ResponseField>
+
+<ResponseField name="completedDeliveries" type="number">
+  Number of successfully completed deliveries
+</ResponseField>
+
+<ResponseField name="pendingDeliveries" type="number">
+  Number of current pending/in-progress deliveries
+</ResponseField>
+
+<ResponseField name="failedDeliveries" type="number">
+  Number of failed or cancelled deliveries
+</ResponseField>
+
+<ResponseField name="totalEarnings" type="number">
+  Total earnings from all deliveries (in local currency)
+</ResponseField>
+
+<ResponseField name="currentMonthEarnings" type="number">
+  Earnings for the current month
+</ResponseField>
+
+<ResponseField name="averageDeliveryTime" type="number">
+  Average delivery time in minutes
+</ResponseField>
+
+<ResponseField name="successRate" type="number">
+  Percentage of successful deliveries (0-100)
+</ResponseField>
+
+<ResponseField name="rating" type="number">
+  Average customer rating (0-5 stars)
+</ResponseField>
+
+<ResponseField name="activeAssignments" type="number">
+  Number of currently active delivery assignments
+</ResponseField>
+
+<Warning>
+  Riders can only access their own statistics. Attempting to access another rider's stats will result in a 403 Forbidden error.
+</Warning>
+
+---
+
+## Document Expiry Management
+
+<Tip>
+  The system tracks document expiry dates. It's recommended to:
+  - Monitor riders with documents expiring within 30 days
+  - Prevent assignment of new deliveries to riders with expired documents
+  - Send reminders to riders to update their documents before expiry
+</Tip>
+
+### Example: Check for Expiring Documents
+
+While there's no dedicated endpoint, you can filter the rider list and check `documentExpiryDate`:
+
+```javascript
+const today = new Date();
+const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+
+const ridersWithExpiringDocs = riders.filter(rider => {
+  const expiryDate = new Date(rider.rider.documentExpiryDate);
+  return expiryDate <= thirtyDaysFromNow && expiryDate >= today;
+});
+```
+
+## Error Responses
+
+<ResponseField name="400 Bad Request">
+  Invalid input data, missing required fields, or validation errors
+</ResponseField>
+
+<ResponseField name="401 Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403 Forbidden">
+  User doesn't have Admin role or rider accessing another rider's stats
+</ResponseField>
+
+<ResponseField name="404 Not Found">
+  Rider not found
+</ResponseField>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Secure Credentials" icon="lock">
+    Always communicate default passwords securely and require riders to change them on first login.
+  </Card>
+  <Card title="Document Verification" icon="file-check">
+    Verify all uploaded documents are clear and valid before approving rider accounts.
+  </Card>
+  <Card title="Track Expiry" icon="calendar-clock">
+    Monitor document expiry dates and proactively request updates from riders.
+  </Card>
+  <Card title="Vehicle Info" icon="circle-info">
+    Keep vehicle information up to date for insurance and operational purposes.
+  </Card>
+</CardGroup>

@@ -1,0 +1,247 @@
+---
+title: 'Create Booking'
+description: 'Create a new delivery booking (order) in the DPM Delivery system'
+---
+
+## Endpoint
+
+<api-endpoint method="POST" path="/api/v1/bookings" />
+
+Creates a new booking after successful payment. Only users with the `User` role can create bookings.
+
+## Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication. Required role: **User**
+</ParamField>
+
+## Request Body
+
+<ParamField body="place" type="string" required>
+  UUID of the place where the order is being placed
+</ParamField>
+
+<ParamField body="services" type="array" required>
+  Array of ordered products/services
+  
+  <Expandable title="Service Object Properties">
+    <ParamField body="product" type="string" required>
+      UUID of the product being ordered
+    </ParamField>
+    
+    <ParamField body="quantity" type="number" required>
+      Quantity of the product
+    </ParamField>
+    
+    <ParamField body="price" type="number" required>
+      Price per unit of the product
+    </ParamField>
+    
+    <ParamField body="place" type="string" required>
+      UUID of the place (must match the main place field)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="delivery_address" type="string" required>
+  Full address where the order should be delivered
+</ParamField>
+
+<ParamField body="recipient_phone" type="string" required>
+  Phone number of the recipient (Ghana phone number format)
+</ParamField>
+
+<ParamField body="transaction_id" type="string" required>
+  Unique identifier for the payment transaction
+</ParamField>
+
+<ParamField body="request_id" type="string" required>
+  Payment request identifier
+</ParamField>
+
+<ParamField body="total_amount" type="number">
+  Total amount for the booking (sum of price + delivery_fee + rider_tip)
+</ParamField>
+
+<ParamField body="quantity" type="number">
+  Total quantity of items in the order
+</ParamField>
+
+<ParamField body="price" type="number">
+  Base price of all products/services
+</ParamField>
+
+<ParamField body="delivery_fee" type="number">
+  Fee for delivery service
+</ParamField>
+
+<ParamField body="rider_tip" type="number">
+  Optional tip for the delivery rider (default: 0)
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique identifier for the created booking (UUID)
+</ResponseField>
+
+<ResponseField name="reference_code" type="string">
+  Generated reference code for tracking the booking
+</ResponseField>
+
+<ResponseField name="place" type="object">
+  Details of the place where the order was placed
+</ResponseField>
+
+<ResponseField name="services" type="array">
+  Array of ordered products with details
+</ResponseField>
+
+<ResponseField name="status" type="object">
+  Booking status object with label (initially "pending")
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  User who created the booking
+</ResponseField>
+
+<ResponseField name="recipient_address" type="string">
+  Delivery address
+</ResponseField>
+
+<ResponseField name="recipient_phone" type="string">
+  Recipient phone number
+</ResponseField>
+
+<ResponseField name="total_amount" type="number">
+  Total booking amount
+</ResponseField>
+
+<ResponseField name="delivery_fee" type="number">
+  Delivery fee
+</ResponseField>
+
+<ResponseField name="rider_tip" type="number">
+  Rider tip amount
+</ResponseField>
+
+<ResponseField name="paid" type="boolean">
+  Payment status (true if paid)
+</ResponseField>
+
+<ResponseField name="transaction_id" type="string">
+  Payment transaction identifier
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Timestamp when the booking was created
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  Timestamp when the booking was last updated
+</ResponseField>
+
+## Example Request
+
+```json
+{
+  "place": "123e4567-e89b-12d3-a456-426614174000",
+  "services": [
+    {
+      "product": "987fcdeb-51a2-43d7-9c8e-123456789abc",
+      "quantity": 2,
+      "price": 25.50,
+      "place": "123e4567-e89b-12d3-a456-426614174000"
+    },
+    {
+      "product": "456def78-9abc-1234-5678-9abcdef01234",
+      "quantity": 1,
+      "price": 15.00,
+      "place": "123e4567-e89b-12d3-a456-426614174000"
+    }
+  ],
+  "delivery_address": "123 Main Street, Nkawkaw, Eastern Region",
+  "recipient_phone": "+233244123456",
+  "transaction_id": "TXN_1234567890",
+  "request_id": "REQ_0987654321",
+  "total_amount": 71.00,
+  "quantity": 3,
+  "price": 66.00,
+  "delivery_fee": 5.00,
+  "rider_tip": 0
+}
+```
+
+## Example Response
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "reference_code": "BKG-20260304-001",
+  "place": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "Tasty Bites Restaurant",
+    "address": "456 Food Street, Nkawkaw"
+  },
+  "services": [
+    {
+      "id": "ord-prod-001",
+      "product": {
+        "id": "987fcdeb-51a2-43d7-9c8e-123456789abc",
+        "name": "Jollof Rice with Chicken"
+      },
+      "quantity": 2,
+      "price": 25.50
+    },
+    {
+      "id": "ord-prod-002",
+      "product": {
+        "id": "456def78-9abc-1234-5678-9abcdef01234",
+        "name": "Fried Plantain"
+      },
+      "quantity": 1,
+      "price": 15.00
+    }
+  ],
+  "status": {
+    "label": "pending"
+  },
+  "user": {
+    "id": "user-123",
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  "recipient_address": "123 Main Street, Nkawkaw, Eastern Region",
+  "recipient_phone": "+233244123456",
+  "total_amount": 71.00,
+  "delivery_fee": 5.00,
+  "rider_tip": 0,
+  "paid": true,
+  "transaction_id": "TXN_1234567890",
+  "created_at": "2026-03-04T10:30:00Z",
+  "updated_at": "2026-03-04T10:30:00Z"
+}
+```
+
+## Error Responses
+
+<ResponseField name="400 Bad Request" type="object">
+  Invalid request data (e.g., invalid phone number format, missing required fields)
+</ResponseField>
+
+<ResponseField name="401 Unauthorized" type="object">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403 Forbidden" type="object">
+  User does not have the required role (must be User role)
+</ResponseField>
+
+## Notes
+
+- The booking is created with an initial status of `pending`
+- Payment must be completed before creating the booking (valid `transaction_id` required)
+- Phone numbers must be in Ghana format (validated with `@IsPhoneNumber('GH')`)
+- All UUIDs must be valid UUID v4 format
+- The `place` ID in the services array must match the main `place` field
+- After creation, the place admin will be notified of the new booking

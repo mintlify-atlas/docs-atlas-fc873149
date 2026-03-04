@@ -1,0 +1,350 @@
+---
+title: 'Payment Integration'
+description: 'Complete guide to implementing mobile money payments'
+---
+
+## Make Payment
+
+Initiate a mobile money payment request.
+
+<Note>
+  This endpoint creates a payment request through Kowri gateway. The customer will receive a prompt on their mobile device to authorize the payment.
+</Note>
+
+### Endpoint
+
+```http
+POST /payment
+```
+
+### Request Body
+
+<ParamField body="amount" type="number" required>
+  Payment amount in the specified currency
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  Currency code (e.g., `GHS` for Ghanaian Cedi)
+</ParamField>
+
+<ParamField body="customerName" type="string" required>
+  Full name of the customer making the payment
+</ParamField>
+
+<ParamField body="customerMobile" type="string" required>
+  Customer's mobile money number
+</ParamField>
+
+<ParamField body="provider" type="string" required>
+  Mobile money provider. Must be one of: `MOMO`, `AIRTELTIGO`, `TELECEL`
+</ParamField>
+
+<ParamField body="reference" type="string" required>
+  Your unique reference for this payment
+</ParamField>
+
+<ParamField body="transactionId" type="string" required>
+  Your internal transaction ID
+</ParamField>
+
+<ParamField body="requestId" type="string" required>
+  Unique request identifier for tracking
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.dpm-delivery.com/payment \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 50.00,
+    "currency": "GHS",
+    "customerName": "John Doe",
+    "customerMobile": "0241234567",
+    "provider": "MOMO",
+    "reference": "ORDER-12345",
+    "transactionId": "TXN-67890",
+    "requestId": "REQ-54321"
+  }'
+```
+
+### Response
+
+The endpoint returns the response from Kowri payment gateway:
+
+```json
+{
+  "status": "success",
+  "message": "Payment initiated successfully",
+  "data": {
+    "requestId": "REQ-54321",
+    "transactionId": "TXN-67890",
+    "reference": "ORDER-12345",
+    "status": "pending"
+  }
+}
+```
+
+## Check Payment Status
+
+Verify the status of a payment request.
+
+### Endpoint
+
+```http
+GET /payment/check-status
+```
+
+### Request Body
+
+<ParamField body="requestId" type="string" required>
+  The request ID from the payment initialization
+</ParamField>
+
+<ParamField body="transactionId" type="string" required>
+  The transaction ID from the payment initialization
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET https://api.dpm-delivery.com/payment/check-status \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestId": "REQ-54321",
+    "transactionId": "TXN-67890"
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "data": {
+    "transactionId": "TXN-67890",
+    "status": "completed",
+    "amount": 50.00,
+    "currency": "GHS",
+    "paidAt": "2024-03-04T10:30:00Z"
+  }
+}
+```
+
+### Payment Statuses
+
+- `pending` - Payment request sent, waiting for customer approval
+- `completed` - Payment successfully completed
+- `failed` - Payment failed or was declined
+- `cancelled` - Payment was cancelled
+- `timeout` - Payment request expired
+
+## Verify Mobile Money Account
+
+Verify a mobile money account before processing payment.
+
+<Note>
+  This endpoint uses Paystack's account resolution API to verify mobile money accounts.
+</Note>
+
+### Endpoint
+
+```http
+POST /payment/verify-mobile-money-account
+```
+
+### Request Body
+
+<ParamField body="accountNumber" type="string" required>
+  Mobile money number in Ghanaian format (e.g., `0241234567`)
+</ParamField>
+
+<ParamField body="provider" type="string" required>
+  Mobile money provider enum: `MOMO`, `AIRTELTIGO`, or `TELECEL`
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.dpm-delivery.com/payment/verify-mobile-money-account \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountNumber": "0241234567",
+    "provider": "MOMO"
+  }'
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "accountName": "John Doe"
+}
+```
+
+### Error Response
+
+```json
+{
+  "statusCode": 400,
+  "message": "Invalid account number or provider",
+  "error": "Bad Request"
+}
+```
+
+## Implementation Guide
+
+### Step 1: Verify Account (Optional)
+
+Before processing payment, verify the customer's mobile money account:
+
+```typescript
+const verifyAccount = async (mobile: string, provider: string) => {
+  const response = await fetch('/payment/verify-mobile-money-account', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      accountNumber: mobile,
+      provider: provider
+    })
+  });
+  
+  const data = await response.json();
+  return data.accountName;
+};
+```
+
+### Step 2: Initialize Payment
+
+Create a payment request:
+
+```typescript
+const initiatePayment = async (paymentData) => {
+  const response = await fetch('/payment', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      amount: paymentData.amount,
+      currency: 'GHS',
+      customerName: paymentData.customerName,
+      customerMobile: paymentData.mobile,
+      provider: paymentData.provider,
+      reference: `ORDER-${Date.now()}`,
+      transactionId: `TXN-${Date.now()}`,
+      requestId: `REQ-${Date.now()}`
+    })
+  });
+  
+  return await response.json();
+};
+```
+
+### Step 3: Poll Payment Status
+
+Check payment status periodically:
+
+```typescript
+const checkPaymentStatus = async (requestId: string, transactionId: string) => {
+  const response = await fetch('/payment/check-status', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      requestId,
+      transactionId
+    })
+  });
+  
+  return await response.json();
+};
+
+// Poll every 5 seconds for up to 2 minutes
+const pollPayment = async (requestId, transactionId) => {
+  const maxAttempts = 24; // 2 minutes / 5 seconds
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    const status = await checkPaymentStatus(requestId, transactionId);
+    
+    if (status.data.status === 'completed') {
+      return { success: true, data: status.data };
+    }
+    
+    if (['failed', 'cancelled', 'timeout'].includes(status.data.status)) {
+      return { success: false, data: status.data };
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    attempts++;
+  }
+  
+  return { success: false, error: 'Payment verification timeout' };
+};
+```
+
+## Provider Mapping
+
+The service automatically maps provider codes for Kowri:
+
+| Provider Enum | Display Name | Kowri Code |
+|---------------|--------------|------------|
+| `MOMO` | MTN Mobile Money | `MTN` |
+| `AIRTELTIGO` | AirtelTigo Money | `ATL` |
+| `TELECEL` | Telecel Cash | `VOD` |
+
+Implementation reference: `/home/daytona/workspace/source/src/payment/payment.service.ts:16`
+
+## Error Handling
+
+Handle common payment errors:
+
+```typescript
+try {
+  const result = await initiatePayment(paymentData);
+  
+  if (result.status === 'success') {
+    // Poll for payment completion
+    const payment = await pollPayment(result.data.requestId, result.data.transactionId);
+    
+    if (payment.success) {
+      console.log('Payment completed successfully');
+    } else {
+      console.error('Payment failed:', payment.error);
+    }
+  }
+} catch (error) {
+  console.error('Payment initialization failed:', error);
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always verify accounts before large transactions">
+    Use the account verification endpoint to ensure the mobile money number is valid before processing significant payments.
+  </Accordion>
+  
+  <Accordion title="Implement proper timeout handling">
+    Mobile money payments can take 30-120 seconds. Implement a polling mechanism with reasonable timeouts.
+  </Accordion>
+  
+  <Accordion title="Store transaction references">
+    Always store the `requestId` and `transactionId` for future reference and reconciliation.
+  </Accordion>
+  
+  <Accordion title="Handle network failures gracefully">
+    Mobile money transactions may fail due to network issues. Implement retry logic with exponential backoff.
+  </Accordion>
+</AccordionGroup>

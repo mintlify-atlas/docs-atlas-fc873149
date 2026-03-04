@@ -1,0 +1,612 @@
+---
+title: Integration Guide
+description: Configure and integrate Paystack payments, SMS notifications, and Cloudinary file uploads
+---
+
+## Overview
+
+The DPM Delivery API integrates with several third-party services for payments, messaging, and file storage. This guide covers the configuration and usage of each integration.
+
+## Payment Integration
+
+### Supported Payment Providers
+
+The API supports two payment providers:
+
+<CardGroup cols={2}>
+  <Card title="Kowri" icon="mobile">
+    Mobile money payments (MTN, AirtelTigo, Telecel)
+  </Card>
+  <Card title="Paystack" icon="credit-card">
+    Account verification and card payments
+  </Card>
+</CardGroup>
+
+### Kowri Mobile Money Setup
+
+<Steps>
+  <Step title="Get Kowri Credentials">
+    Sign up at [Kowri](https://kowripay.com) and obtain:
+    - App ID
+    - App Reference
+    - App Secret
+    - API Endpoint
+  </Step>
+
+  <Step title="Configure Environment">
+    Add Kowri credentials to your `.env` file:
+
+    ```bash
+    KOWRI_EP="https://api.kowripay.com"
+    KOWRI_APP_ID="your_app_id"
+    KOWRI_APP_REFERENCE="your_app_reference"
+    KOWRI_APP_SECRET="your_app_secret"
+    KOWRI_ENV="Test"
+    ```
+
+    <Info>
+      Set `KOWRI_ENV` to `"Production"` when going live.
+    </Info>
+  </Step>
+
+  <Step title="Implementation">
+    The Kowri integration is implemented in `src/payment/payment.service.ts`:
+
+    ```typescript
+    async acceptPayment(body: CreateMobilePaymentDto) {
+      try {
+        const appId = this.configService.get('KOWRI_APP_ID');
+        const appReference = this.configService.get('KOWRI_APP_REFERENCE');
+        const appSecret = this.configService.get('KOWRI_APP_SECRET');
+        const environment = 'Test';
+
+        const payload = {
+          ...body,
+          walletRef: body.customerMobile,
+          appReference,
+          secret: appSecret,
+          customerSegment: environment,
+          serviceCode: '3058',
+        };
+
+        const endpoint = externalApis.payment.payNow();
+        const response = await axios.post(endpoint, payload, {
+          headers: { appId },
+        });
+        return response.data;
+      } catch (error) {
+        return error?.response?.data;
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+### Mobile Money Provider Codes
+
+The API supports Ghana mobile money providers with the following codes:
+
+```typescript
+export const MOBILE_MONEY_CODES: Record<string, string> = {
+  MOMO: 'MTN',           // MTN Mobile Money
+  AIRTELTIGO: 'ATL',     // AirtelTigo Money
+  TELECEL: 'VOD',        // Telecel Cash (formerly Vodafone Cash)
+};
+```
+
+### Paystack Setup
+
+<Steps>
+  <Step title="Get Paystack API Keys">
+    1. Create an account at [Paystack](https://paystack.com)
+    2. Navigate to Settings → API Keys & Webhooks
+    3. Copy your Secret Key (starts with `sk_test_` or `sk_live_`)
+  </Step>
+
+  <Step title="Configure Environment">
+    Add Paystack credentials to your `.env`:
+
+    ```bash
+    PAYSTACK_SECRET="sk_test_xxxxxxxxxxxxx"
+    PAYSTACK_BASE_URL="https://api.paystack.co"
+    ```
+
+    <Warning>
+      Use test keys (`sk_test_`) in development and live keys (`sk_live_`) in production.
+    </Warning>
+  </Step>
+
+  <Step title="Account Verification">
+    Paystack is used to verify mobile money accounts before processing payments:
+
+    ```typescript
+    async verifyMobileMoneyAccount(
+      accountNumber: string,
+      provider: MobileMoneyProvider,
+    ) {
+      const bankCode = MOBILE_MONEY_CODES[provider];
+
+      if (!bankCode) {
+        throw new BadRequestException(
+          ERRORS.PAYMENT_METHOD.DOES_NOT_EXIST.EN
+        );
+      }
+
+      try {
+        const endpoint = externalApis.paystack.verifyPhoneNumber(
+          accountNumber,
+          bankCode,
+        );
+        const response = await axios.get<ResolveAccountResponse>(endpoint, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${ENV.PAYSTACK_SECRET}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const result = response.data;
+
+        if (!result.status || !result.data) {
+          throw new BadRequestException(result.message);
+        }
+
+        return {
+          success: true,
+          accountName: result.data.account_name,
+        };
+      } catch (error: any) {
+        throw new InternalServerErrorException(error.message);
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+### Payment API Endpoints
+
+The external API endpoints are configured in `src/lib/external-api.ts`:
+
+```typescript
+export const externalApis = {
+  payment: {
+    baseUrl: payment_api_base_url,
+    payNow: () => payment_api_base_url + '/webpos/payNow',
+    checkStatus: () => payment_api_base_url + `/webpos/checkPaymentStatus`,
+  },
+  paystack: {
+    baseUrl: ENV.PAYSTACK_BASE_URL,
+    verifyPhoneNumber: (accountNumber: string, bankCode: string) =>
+      paystack_api_base_url +
+      '/bank/resolve?' +
+      new URLSearchParams({
+        account_number: accountNumber,
+        bank_code: bankCode,
+      }),
+  },
+};
+```
+
+### Check Payment Status
+
+Verify payment status using the transaction ID:
+
+```typescript
+async checkPaymentStatus(body: CheckPaymentStatusDto) {
+  try {
+    const appId = this.configService.get('KOWRI_APP_ID');
+    const appReference = this.configService.get('KOWRI_APP_REFERENCE');
+    const appSecret = this.configService.get('KOWRI_APP_SECRET');
+
+    const payload = {
+      ...body,
+      appReference,
+      secret: appSecret,
+    };
+
+    const endpoint = externalApis.payment.checkStatus();
+    const response = await axios.post(endpoint, payload, {
+      headers: { appId },
+    });
+    return response.data;
+  } catch (error) {
+    return { error: error?.message };
+  }
+}
+```
+
+## SMS Integration (Arkesel)
+
+### Setup
+
+<Steps>
+  <Step title="Get Arkesel API Key">
+    1. Sign up at [Arkesel](https://arkesel.com)
+    2. Navigate to API Settings
+    3. Generate and copy your API key
+  </Step>
+
+  <Step title="Configure Environment">
+    Add Arkesel credentials to `.env`:
+
+    ```bash
+    ARKESEL_KEY="your_api_key_here"
+    ARKESEL_ENDPOINT_V2="https://sms.arkesel.com/api/v2"
+    ```
+  </Step>
+
+  <Step title="SMS Service Implementation">
+    The SMS service is implemented in `src/sms/sms.service.ts`:
+
+    ```typescript
+    import { Injectable } from '@nestjs/common';
+    import axios, { AxiosInstance } from 'axios';
+    import { ARKESEL_ENDPOINTS } from 'src/utils/constants';
+
+    @Injectable()
+    export class SmsService {
+      http: AxiosInstance;
+
+      constructor() {
+        this.http = axios.create({
+          baseURL: process.env.ARKESEL_ENDPOINT_V2,
+          headers: {
+            'api-key': process.env.ARKESEL_KEY,
+          },
+        });
+      }
+
+      async send(recipients: string[], message: string) {
+        const body = {
+          sender: 'DPMDelivery',
+          message,
+          recipients,
+        };
+        try {
+          const response = await this.http.post(
+            ARKESEL_ENDPOINTS.SEND_SM, 
+            body
+          );
+          return response;
+        } catch (error) {
+          console.log(error);
+          throw error;
+        }
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+### Usage Example
+
+<CodeGroup>
+
+```typescript Send Single SMS
+import { SmsService } from './sms/sms.service';
+
+@Injectable()
+export class BookingService {
+  constructor(private smsService: SmsService) {}
+
+  async sendBookingConfirmation(phoneNumber: string, bookingRef: string) {
+    const message = `Your booking ${bookingRef} has been confirmed. Thank you for using DPM Delivery.`;
+    await this.smsService.send([phoneNumber], message);
+  }
+}
+```
+
+```typescript Send Bulk SMS
+import { SmsService } from './sms/sms.service';
+
+@Injectable()
+export class NotificationService {
+  constructor(private smsService: SmsService) {}
+
+  async sendBulkNotification(phoneNumbers: string[], message: string) {
+    // Send to multiple recipients at once
+    await this.smsService.send(phoneNumbers, message);
+  }
+}
+```
+
+</CodeGroup>
+
+<Info>
+  The sender ID is set to "DPMDelivery" by default. Contact Arkesel support to register a custom sender ID.
+</Info>
+
+## Cloudinary File Upload
+
+### Setup
+
+<Steps>
+  <Step title="Create Cloudinary Account">
+    1. Sign up at [Cloudinary](https://cloudinary.com)
+    2. Go to Dashboard to find your credentials
+    3. Copy Cloud Name, API Key, and API Secret
+  </Step>
+
+  <Step title="Configure Environment">
+    Add Cloudinary credentials to `.env`:
+
+    ```bash
+    CLOUDINARY_CLOUD_NAME="your_cloud_name"
+    CLOUDINARY_API_KEY="your_api_key"
+    CLOUDINARY_VERSION="v1"
+    CLOUDINARY_SECRET="your_api_secret"
+    ```
+  </Step>
+
+  <Step title="Provider Configuration">
+    The Cloudinary provider is configured in `src/files/cloudinary.provider.ts`:
+
+    ```typescript
+    import { v2 } from 'cloudinary';
+
+    export const CloudinaryProvider = {
+      provide: 'Cloudinary',
+      useFactory: (): void => {
+        v2.config({
+          cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_SECRET,
+        });
+      },
+    };
+    ```
+  </Step>
+
+  <Step title="Module Registration">
+    Register in `src/files/files.module.ts`:
+
+    ```typescript
+    import { Module } from '@nestjs/common';
+    import { CloudinaryProvider } from './cloudinary.provider';
+    import { FilesService } from './files.service';
+
+    @Module({
+      providers: [FilesService, CloudinaryProvider],
+      exports: [CloudinaryProvider, FilesService],
+    })
+    export class FilesModule {}
+    ```
+  </Step>
+</Steps>
+
+### Upload Image Files
+
+The `FilesService` provides methods for uploading images from `src/files/files.service.ts`:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import {
+  v2 as Cloudinary,
+  UploadApiErrorResponse,
+  UploadApiResponse,
+} from 'cloudinary';
+import { BufferStream } from '@myrotvorets/buffer-stream';
+
+@Injectable()
+export class FilesService {
+  async uploadImage(
+    file: Express.Multer.File,
+  ): Promise<UploadApiResponse | UploadApiErrorResponse> {
+    return new Promise((resolve, reject) => {
+      const upload = Cloudinary.uploader.upload_stream((error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      });
+
+      new BufferStream(file.buffer).pipe(upload);
+    });
+  }
+
+  async uploadDocument(document: string) {
+    return new Promise((resolve, reject) => {
+      Cloudinary.uploader.upload(document, {}, (error, result) => {
+        if (error) reject(error);
+        resolve(result);
+      });
+    });
+  }
+
+  async deleteImage(publicId: string) {
+    try {
+      const deletedImage = await Cloudinary.uploader.destroy(publicId);
+      return deletedImage;
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+}
+```
+
+### Usage in Controllers
+
+<CodeGroup>
+
+```typescript Upload Single File
+import { 
+  Controller, 
+  Post, 
+  UseInterceptors, 
+  UploadedFile 
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesService } from './files/files.service';
+
+@Controller('uploads')
+export class UploadsController {
+  constructor(private filesService: FilesService) {}
+
+  @Post('image')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadImage(@UploadedFile() file: Express.Multer.File) {
+    const result = await this.filesService.uploadImage(file);
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+    };
+  }
+}
+```
+
+```typescript Delete File
+import { Controller, Delete, Param } from '@nestjs/common';
+import { FilesService } from './files/files.service';
+
+@Controller('uploads')
+export class UploadsController {
+  constructor(private filesService: FilesService) {}
+
+  @Delete(':publicId')
+  async deleteImage(@Param('publicId') publicId: string) {
+    await this.filesService.deleteImage(publicId);
+    return { message: 'Image deleted successfully' };
+  }
+}
+```
+
+</CodeGroup>
+
+### PDF Receipt Generation
+
+The API also generates PDF receipts and uploads them to Cloudinary:
+
+<Accordion title="View PDF Generation Code">
+  ```typescript
+  async createBookingReceipt(booking: ICreateBooking) {
+    const deliveryCost = booking.delivery_fee || 0;
+    const subTotal = booking.total_amount - deliveryCost;
+    const tip = booking?.rider_tip || 0;
+    
+    return tryCatch(async () => {
+      this.generateBookingReceiptHeader();
+      this.generatePdfHr(70);
+      this.generateBookingMeta(booking.reference);
+      this.generateTableRow('QTY', 'DESCRIPTION', 'AMOUNT', 143);
+      this.generatePdfHr(152);
+      
+      // Generate PDF content...
+      
+      const buffer = await new Promise((resolve) => {
+        const buffers: Buffer[] = [];
+        this.doc.on('data', (chunk: Buffer) => buffers.push(chunk));
+        this.doc.on('end', () => {
+          const pdfBuffer = Buffer.concat(buffers);
+          resolve(pdfBuffer);
+        });
+        this.doc.end();
+      });
+      
+      await Cloudinary.uploader
+        .upload_stream(
+          { resource_type: 'auto' },
+          async (error: any, result: any) => {
+            if (error) {
+              console.log('ERROR', error);
+            } else {
+              const bookings = await this.bookingRepository.findOne({
+                where: { id: booking.id },
+              });
+              bookings.receipt_url = result.secure_url;
+              await bookings.save();
+            }
+          },
+        )
+        .end(buffer);
+    });
+  }
+  ```
+</Accordion>
+
+## Testing Integrations
+
+### Payment Testing
+
+<CodeGroup>
+
+```bash Test Mobile Money Payment
+curl -X POST http://localhost:8080/api/v1/payment/mobile \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100,
+    "customerMobile": "0241234567",
+    "customerName": "John Doe",
+    "provider": "MOMO"
+  }'
+```
+
+```bash Verify Account
+curl -X GET "http://localhost:8080/api/v1/payment/verify?accountNumber=0241234567&provider=MOMO" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+</CodeGroup>
+
+### SMS Testing
+
+```bash
+curl -X POST http://localhost:8080/api/v1/sms/send \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "recipients": ["+233241234567"],
+    "message": "Test message from DPM Delivery"
+  }'
+```
+
+### File Upload Testing
+
+```bash
+curl -X POST http://localhost:8080/api/v1/uploads/image \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "file=@/path/to/image.jpg"
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Payment Provider Errors">
+    **Issue**: Payment requests failing
+
+    **Solutions**:
+    - Verify API credentials are correct in `.env`
+    - Check if using test/live keys appropriately
+    - Ensure mobile number format is correct (10 digits for Ghana)
+    - Verify provider code matches `MOBILE_MONEY_CODES`
+  </Accordion>
+
+  <Accordion title="SMS Not Sending">
+    **Issue**: SMS messages not being delivered
+
+    **Solutions**:
+    - Verify Arkesel API key is valid
+    - Check phone number format (include country code)
+    - Ensure sender ID "DPMDelivery" is approved
+    - Check Arkesel account balance
+  </Accordion>
+
+  <Accordion title="Cloudinary Upload Fails">
+    **Issue**: File uploads returning errors
+
+    **Solutions**:
+    - Verify Cloudinary credentials in `.env`
+    - Check file size limits (default 10MB)
+    - Ensure file format is supported
+    - Check Cloudinary account quota
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/guides/error-handling">
+    Learn about validation and exception handling
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/auth/signup">
+    Explore all available API endpoints
+  </Card>
+</CardGroup>

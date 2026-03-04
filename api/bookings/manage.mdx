@@ -1,0 +1,306 @@
+---
+title: 'Manage Bookings'
+description: 'View, update, and manage delivery bookings in the DPM Delivery system'
+---
+
+## List All Bookings (Admin)
+
+<api-endpoint method="GET" path="/api/v1/bookings" />
+
+Retrieve all bookings with advanced filtering options. Only accessible by super admins.
+
+### Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication. Required role: **Admin**
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="status" type="string">
+  Filter by booking status. Options: `pending`, `confirmed`, `rider_assigned`, `delivered`, `cancelled`, `rejected`
+</ParamField>
+
+<ParamField query="page" type="string">
+  Page number for pagination (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="string">
+  Number of items per page (default: 10)
+</ParamField>
+
+<ParamField query="category" type="string">
+  Filter by place category
+</ParamField>
+
+<ParamField query="query" type="string">
+  Search query for booking details
+</ParamField>
+
+<ParamField query="from" type="string">
+  Start date filter (ISO 8601 format)
+</ParamField>
+
+<ParamField query="to" type="string">
+  End date filter (ISO 8601 format)
+</ParamField>
+
+<ParamField query="place" type="string">
+  Filter by specific place ID
+</ParamField>
+
+### Example Request
+
+```bash
+GET /api/v1/bookings?status=pending&page=1&limit=20&from=2026-03-01&to=2026-03-31
+```
+
+---
+
+## Get Place Bookings
+
+<api-endpoint method="GET" path="/api/v1/bookings/ours" />
+
+Retrieve all bookings for the authenticated place admin's place.
+
+### Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication. Required role: **Place Admin**
+</ParamField>
+
+### Response
+
+Returns an array of bookings associated with the place admin's managed place.
+
+---
+
+## Get Booking by ID
+
+<api-endpoint method="GET" path="/api/v1/bookings/:id" />
+
+Retrieve a specific booking by its ID. Accessible by admins, place admins, and users.
+
+### Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication. Required roles: **Admin**, **Place Admin**, or **User**
+</ParamField>
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the booking to retrieve
+</ParamField>
+
+### Example Request
+
+```bash
+GET /api/v1/bookings/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+```
+
+---
+
+## Update Booking Status
+
+The following endpoints allow authorized users to transition bookings through different states.
+
+### Confirm Booking
+
+<api-endpoint method="PUT" path="/api/v1/bookings/:id/confirm-booking" />
+
+Confirm a pending booking. Transitions status from `pending` to `confirmed`.
+
+**Required roles:** Admin, Place Admin
+
+<ParamField path="id" type="string" required>
+  UUID of the booking to confirm
+</ParamField>
+
+### Deliver Booking
+
+<api-endpoint method="PUT" path="/api/v1/bookings/:id/deliver-booking" />
+
+Mark a booking as delivered. Transitions status to `delivered`.
+
+**Required roles:** Admin, Place Admin
+
+<ParamField path="id" type="string" required>
+  UUID of the booking to mark as delivered
+</ParamField>
+
+### Cancel Booking
+
+<api-endpoint method="PUT" path="/api/v1/bookings/:id/cancel-booking" />
+
+Cancel a booking. Transitions status to `cancelled`.
+
+**Required roles:** Admin, Place Admin
+
+<ParamField path="id" type="string" required>
+  UUID of the booking to cancel
+</ParamField>
+
+### Reject Booking
+
+<api-endpoint method="PUT" path="/api/v1/bookings/:id/reject-booking" />
+
+Reject a booking. Transitions status to `rejected`.
+
+**Required roles:** Admin, Place Admin, User
+
+<ParamField path="id" type="string" required>
+  UUID of the booking to reject
+</ParamField>
+
+### Example Request
+
+```bash
+PUT /api/v1/bookings/a1b2c3d4-e5f6-7890-abcd-ef1234567890/confirm-booking
+Authorization: Bearer <token>
+```
+
+### Example Response
+
+```json
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": {
+    "label": "confirmed"
+  },
+  "updated_at": "2026-03-04T11:00:00Z"
+}
+```
+
+---
+
+## Delete Booking
+
+<api-endpoint method="DELETE" path="/api/v1/bookings/:id" />
+
+Permanently delete a booking. Only accessible by admins and the user who created the booking.
+
+### Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication. Required roles: **Admin** or **User** (must own the booking)
+</ParamField>
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the booking to delete
+</ParamField>
+
+### Example Request
+
+```bash
+DELETE /api/v1/bookings/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+Authorization: Bearer <token>
+```
+
+---
+
+## Get Total Bookings Count
+
+<api-endpoint method="GET" path="/api/v1/bookings/all/count" />
+
+Get the total count of bookings for the authenticated user or all bookings (for admins).
+
+### Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication. Required roles: **Admin** or **User**
+</ParamField>
+
+### Response
+
+```json
+{
+  "total": 42
+}
+```
+
+---
+
+## Get Sales by Year
+
+<api-endpoint method="GET" path="/api/v1/bookings/all/sales" />
+
+Retrieve booking sales statistics grouped by year and month.
+
+### Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication. Required roles: **Admin** or **Place Admin**
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="year" type="string">
+  Year to retrieve sales data for (e.g., "2026")
+</ParamField>
+
+### Example Request
+
+```bash
+GET /api/v1/bookings/all/sales?year=2026
+Authorization: Bearer <token>
+```
+
+### Example Response
+
+```json
+{
+  "year": 2026,
+  "monthlyData": [
+    {
+      "month": "January",
+      "totalSales": 12500.00,
+      "bookingsCount": 45
+    },
+    {
+      "month": "February",
+      "totalSales": 15200.00,
+      "bookingsCount": 52
+    }
+  ],
+  "totalYearSales": 27700.00,
+  "totalYearBookings": 97
+}
+```
+
+---
+
+## Error Responses
+
+<ResponseField name="400 Bad Request" type="object">
+  Invalid booking ID or request parameters
+</ResponseField>
+
+<ResponseField name="401 Unauthorized" type="object">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403 Forbidden" type="object">
+  User does not have permission to perform this action
+</ResponseField>
+
+<ResponseField name="404 Not Found" type="object">
+  Booking with the specified ID does not exist
+</ResponseField>
+
+## State Transition Rules
+
+- `pending` → Can transition to `confirmed`, `rejected`, or `cancelled`
+- `confirmed` → Can transition to `rider_assigned`, `delivered`, or `cancelled`
+- `rider_assigned` → Can transition to `delivered` or `cancelled`
+- `delivered`, `rejected`, `cancelled` → Terminal states (no further transitions)
+
+## Notes
+
+- All booking ID parameters must be valid UUIDs
+- Place admins can only manage bookings for their assigned place
+- Users can only delete their own bookings
+- Status transitions are validated server-side to ensure proper workflow
+- Some endpoints may trigger notifications to relevant parties (users, place admins, riders)

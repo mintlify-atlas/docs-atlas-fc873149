@@ -1,0 +1,192 @@
+---
+title: 'Rate Booking'
+description: 'Submit ratings and reviews for delivered bookings'
+---
+
+## Endpoint
+
+<api-endpoint method="POST" path="/api/v1/bookings/:id/rate" />
+
+Submit a rating and review for a delivered booking. Only users who placed the booking can rate it, and only after successful delivery.
+
+## Authentication
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token for authentication. Required role: **User**
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the booking to rate
+</ParamField>
+
+## Request Body
+
+<ParamField body="rating" type="number" required>
+  Rating value between 1 and 5 (inclusive)
+  - 1: Poor
+  - 2: Fair
+  - 3: Good
+  - 4: Very Good
+  - 5: Excellent
+</ParamField>
+
+<ParamField body="comment" type="string" required>
+  Written review or feedback about the booking, place, or service
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique identifier for the created review
+</ResponseField>
+
+<ResponseField name="rating" type="number">
+  The submitted rating value (1-5)
+</ResponseField>
+
+<ResponseField name="comment" type="string">
+  The review comment
+</ResponseField>
+
+<ResponseField name="booking" type="object">
+  Reference to the booking that was rated
+</ResponseField>
+
+<ResponseField name="user" type="object">
+  User who submitted the rating
+</ResponseField>
+
+<ResponseField name="place" type="object">
+  Place associated with the booking
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Timestamp when the rating was submitted
+</ResponseField>
+
+## Example Request
+
+```json
+{
+  "rating": 5,
+  "comment": "Excellent service! Food arrived hot and on time. The delivery rider was very professional and courteous. Highly recommend this place!"
+}
+```
+
+## Example Response
+
+```json
+{
+  "id": "rating-abc123",
+  "rating": 5,
+  "comment": "Excellent service! Food arrived hot and on time. The delivery rider was very professional and courteous. Highly recommend this place!",
+  "booking": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "reference_code": "BKG-20260304-001"
+  },
+  "user": {
+    "id": "user-123",
+    "name": "John Doe"
+  },
+  "place": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "Tasty Bites Restaurant"
+  },
+  "created_at": "2026-03-04T15:30:00Z"
+}
+```
+
+## Error Responses
+
+<ResponseField name="400 Bad Request" type="object">
+  Invalid request data:
+  - Rating value not between 1-5
+  - Missing required fields
+  - Booking already rated by this user
+</ResponseField>
+
+<ResponseField name="401 Unauthorized" type="object">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403 Forbidden" type="object">
+  User does not have permission to rate this booking:
+  - User is not the booking owner
+  - User does not have User role
+</ResponseField>
+
+<ResponseField name="404 Not Found" type="object">
+  Booking with the specified ID does not exist
+</ResponseField>
+
+## Rating Guidelines
+
+### When to Rate
+
+- Ratings should only be submitted after the booking has been delivered
+- Users can typically rate a booking once
+- Consider rating based on multiple factors:
+  - Food quality and preparation
+  - Delivery time and accuracy
+  - Rider professionalism
+  - Overall experience
+
+### Rating Scale
+
+<CardGroup cols={2}>
+  <Card title="1-2 Stars" icon="star">
+    Poor to Fair experience. Significant issues with the order, delivery, or service.
+  </Card>
+  <Card title="3 Stars" icon="star">
+    Good experience. Met basic expectations but room for improvement.
+  </Card>
+  <Card title="4 Stars" icon="star">
+    Very Good experience. Exceeded expectations in most areas.
+  </Card>
+  <Card title="5 Stars" icon="star">
+    Excellent experience. Outstanding service in all aspects.
+  </Card>
+</CardGroup>
+
+### Writing Helpful Reviews
+
+Good reviews are:
+- **Specific**: Mention particular aspects of your experience
+- **Honest**: Provide genuine feedback
+- **Constructive**: If rating low, explain what could be improved
+- **Balanced**: Acknowledge both positives and negatives
+- **Respectful**: Be courteous even when disappointed
+
+## Example Reviews
+
+### Excellent (5 stars)
+```
+"Amazing food quality and super fast delivery! The jollof rice was 
+perfectly cooked and still hot when it arrived. The packaging was 
+excellent too. Will definitely order again!"
+```
+
+### Good (3 stars)
+```
+"Food was tasty but delivery took longer than expected. The rider 
+was apologetic and the food was still warm. Would order again but 
+hope for faster delivery next time."
+```
+
+### Poor (1 star)
+```
+"Very disappointed. Order arrived 2 hours late and food was cold. 
+Some items were missing from the order. Customer service was 
+unresponsive when I tried to report the issue."
+```
+
+## Notes
+
+- Ratings contribute to the overall place rating and reputation
+- Place admins can see ratings for their place
+- Reviews may be moderated for inappropriate content
+- Ratings help other users make informed decisions
+- Only users who have completed bookings can submit ratings
+- The booking must be in `delivered` status to be eligible for rating

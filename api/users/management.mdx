@@ -1,0 +1,487 @@
+---
+title: 'User Management'
+description: 'CRUD operations for managing user accounts, profiles, and settings'
+---
+
+## Get Current User
+
+<api-endpoint method="GET" path="/users/me" />
+
+Retrieve the currently authenticated user's profile information.
+
+**Authentication:** Required (any logged-in user)
+
+**Role Required:** Any authenticated user
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "phone": "+233501234567",
+  "email": "john.doe@example.com",
+  "fullName": "John Doe",
+  "address": "123 Main Street, Accra",
+  "isVerified": true,
+  "profilePicture": "https://example.com/profiles/john.jpg",
+  "likes": ["place-id-1", "place-id-2"],
+  "role": {
+    "id": 2,
+    "name": "User"
+  },
+  "isDefaultPassword": false,
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-03-04T14:22:00Z"
+}
+```
+</ResponseExample>
+
+---
+
+## List All Users
+
+<api-endpoint method="GET" path="/users" />
+
+Retrieve a list of all users in the system with optional filtering.
+
+**Authentication:** Required
+
+**Role Required:** Admin
+
+### Query Parameters
+
+<ParamField query="role" type="string">
+  Filter users by role. Values: `User`, `Admin`, `Place Admin`, `Rider`
+</ParamField>
+
+<ParamField query="query" type="string">
+  Search users by name, phone number, or email
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Number of users per page
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.dpm.com/users?role=User&query=john&page=1&limit=20" \
+  -H "Authorization: Bearer <token>"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "phone": "+233501234567",
+      "email": "john.doe@example.com",
+      "fullName": "John Doe",
+      "role": {
+        "id": 2,
+        "name": "User"
+      },
+      "isVerified": true,
+      "createdAt": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "limit": 20
+}
+```
+</ResponseExample>
+
+---
+
+## Get User Count
+
+<api-endpoint method="GET" path="/users/count" />
+
+Get total number of users and statistics.
+
+**Authentication:** Required
+
+**Role Required:** Admin
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "total": 1547,
+  "byRole": {
+    "User": 1200,
+    "Rider": 300,
+    "Place Admin": 45,
+    "Admin": 2
+  }
+}
+```
+</ResponseExample>
+
+---
+
+## Update User Profile
+
+<api-endpoint method="PATCH" path="/users/:id" />
+
+Update a user's profile information. Users can update their own profile, Place Admins can update their profile, and Admins can update any user.
+
+**Authentication:** Required
+
+**Role Required:** User, Place Admin, or Admin
+
+**Content-Type:** `multipart/form-data` (supports file upload)
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The user ID to update
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="fullName" type="string">
+  User's full name
+</ParamField>
+
+<ParamField body="email" type="string">
+  User's email address (must be valid email format)
+</ParamField>
+
+<ParamField body="address" type="string">
+  User's physical address
+</ParamField>
+
+<ParamField body="profilePicture" type="file">
+  Profile picture image file (image formats only)
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X PATCH "https://api.dpm.com/users/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer <token>" \
+  -F "fullName=John Smith" \
+  -F "email=john.smith@example.com" \
+  -F "address=456 New Street, Kumasi" \
+  -F "profilePicture=@/path/to/photo.jpg"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "phone": "+233501234567",
+  "email": "john.smith@example.com",
+  "fullName": "John Smith",
+  "address": "456 New Street, Kumasi",
+  "profilePicture": "https://example.com/profiles/updated-photo.jpg",
+  "updatedAt": "2024-03-04T15:30:00Z"
+}
+```
+</ResponseExample>
+
+<Warning>
+  Users can only update their own profile unless they have Admin privileges.
+</Warning>
+
+---
+
+## Change Password
+
+<api-endpoint method="PUT" path="/users/change-password" />
+
+Change the current user's password.
+
+**Authentication:** Required
+
+**Role Required:** User or Place Admin
+
+### Body Parameters
+
+<ParamField body="password" type="string" required>
+  Current password
+</ParamField>
+
+<ParamField body="newPassword" type="string" required>
+  New password to set
+</ParamField>
+
+<ParamField body="confirmPassword" type="string" required>
+  Confirmation of new password (must match newPassword)
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X PUT "https://api.dpm.com/users/change-password" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "password": "currentPassword123",
+    "newPassword": "newSecurePassword456",
+    "confirmPassword": "newSecurePassword456"
+  }'
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "message": "Password changed successfully",
+  "success": true
+}
+```
+</ResponseExample>
+
+<Note>
+  Password validation rules apply. The new password must meet minimum security requirements.
+</Note>
+
+---
+
+## Get User's Liked Places
+
+<api-endpoint method="GET" path="/users/likes" />
+
+Retrieve all places that the current user has liked.
+
+**Authentication:** Required
+
+**Role Required:** User
+
+### Response
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "place-id-1",
+    "name": "Best Restaurant",
+    "address": "123 Food Street",
+    "category": "Restaurant"
+  },
+  {
+    "id": "place-id-2",
+    "name": "Top Shop",
+    "address": "456 Shopping Ave",
+    "category": "Store"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Get User's Bookings
+
+<api-endpoint method="GET" path="/users/bookings" />
+
+Retrieve all bookings for the current user.
+
+**Authentication:** Required
+
+**Role Required:** User
+
+### Query Parameters
+
+<ParamField query="status" type="string">
+  Filter bookings by status. Options:
+  - `pending` - Booking created but not confirmed
+  - `confirmed` - Booking confirmed
+  - `rider_assigned` - Rider has been assigned
+  - `delivered` - Successfully delivered
+  - `cancelled` - Cancelled by user
+  - `rejected` - Rejected by admin/place
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.dpm.com/users/bookings?status=delivered" \
+  -H "Authorization: Bearer <token>"
+```
+
+### Response
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "booking-id-1",
+    "status": "delivered",
+    "pickupAddress": "123 Main St",
+    "deliveryAddress": "456 Oak Ave",
+    "createdAt": "2024-03-01T10:00:00Z",
+    "deliveredAt": "2024-03-01T14:30:00Z"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Get User's Wallet
+
+<api-endpoint method="GET" path="/users/wallet" />
+
+Retrieve wallet information for the current user.
+
+**Authentication:** Required
+
+**Role Required:** User or Courier
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "id": "wallet-id-1",
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "balance": 250.00,
+  "currency": "GHS",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-03-04T15:45:00Z"
+}
+```
+</ResponseExample>
+
+---
+
+## Get Wallet Transactions
+
+<api-endpoint method="GET" path="/users/wallet/transactions" />
+
+Retrieve transaction history for the current user's wallet.
+
+**Authentication:** Required
+
+**Role Required:** User or Courier
+
+### Query Parameters
+
+<ParamField query="type" type="string">
+  Filter transactions by type:
+  - `payment_received` - Payment received
+  - `withdrawal` - Withdrawal from wallet
+  - `debit` - Debit transaction
+  - `adjustment` - Balance adjustment
+  - `payout_pending` - Payout request pending
+  - `payout_approved` - Payout approved
+  - `payout_rejected` - Payout rejected
+  - `payout_failed` - Payout failed
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Number of transactions per page
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.dpm.com/users/wallet/transactions?type=payment_received&page=1&limit=20" \
+  -H "Authorization: Bearer <token>"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "data": [
+    {
+      "id": "txn-id-1",
+      "type": "payment_received",
+      "amount": 50.00,
+      "description": "Payment for delivery order #12345",
+      "createdAt": "2024-03-04T10:30:00Z"
+    },
+    {
+      "id": "txn-id-2",
+      "type": "withdrawal",
+      "amount": -25.00,
+      "description": "Withdrawal to mobile money",
+      "createdAt": "2024-03-03T14:15:00Z"
+    }
+  ],
+  "total": 45,
+  "page": 1,
+  "limit": 20
+}
+```
+</ResponseExample>
+
+---
+
+## Delete User
+
+<api-endpoint method="DELETE" path="/users/:id" />
+
+Delete a user from the system.
+
+**Authentication:** Required
+
+**Role Required:** Admin
+
+### Path Parameters
+
+<ParamField path="id" type="string (UUID)" required>
+  The user ID to delete
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X DELETE "https://api.dpm.com/users/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer <token>"
+```
+
+### Response
+
+<ResponseExample>
+```json
+{
+  "message": "User deleted successfully",
+  "success": true
+}
+```
+</ResponseExample>
+
+<Warning>
+  Deleting a user is permanent and cannot be undone. This will cascade delete related data including bookings, reviews, and wallet information.
+</Warning>
+
+## Error Responses
+
+<ResponseField name="400 Bad Request">
+  Invalid input data or validation errors
+</ResponseField>
+
+<ResponseField name="401 Unauthorized">
+  Missing or invalid authentication token
+</ResponseField>
+
+<ResponseField name="403 Forbidden">
+  User doesn't have required role/permissions
+</ResponseField>
+
+<ResponseField name="404 Not Found">
+  User not found
+</ResponseField>

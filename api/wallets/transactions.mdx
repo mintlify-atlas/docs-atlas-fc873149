@@ -1,0 +1,567 @@
+---
+title: 'Wallet Transactions & Payouts'
+description: 'API endpoints for wallet operations and payout management'
+---
+
+## Get All Payout Requests
+
+Retrieve all payout requests with filtering options (Admin only).
+
+### Endpoint
+
+```http
+GET /wallets/payout-requests
+```
+
+### Authentication
+
+**Required Role**: `ADMIN`
+
+```bash
+Authorization: Bearer <admin_jwt_token>
+```
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Number of records per page
+</ParamField>
+
+<ParamField query="status" type="enum">
+  Filter by status: `pending`, `approved`, `completed`, `rejected`, `cancelled`, `failed`
+</ParamField>
+
+<ParamField query="payoutMethod" type="enum">
+  Filter by payout method: `mobile_money`, `bank_transfer`
+</ParamField>
+
+<ParamField query="riderId" type="string">
+  Filter by specific rider ID (UUID)
+</ParamField>
+
+<ParamField query="reference" type="string">
+  Search by reference number (partial match)
+</ParamField>
+
+<ParamField query="dateFrom" type="string">
+  Filter by date from (ISO format: `2024-03-01T00:00:00Z`)
+</ParamField>
+
+<ParamField query="dateTo" type="string">
+  Filter by date to (ISO format: `2024-03-31T23:59:59Z`)
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X GET "https://api.dpm-delivery.com/wallets/payout-requests?status=pending&page=1&limit=20" \
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "rider": {
+        "id": "rider-uuid",
+        "fullName": "John Doe",
+        "phone": "0241234567"
+      },
+      "wallet": {
+        "id": "wallet-uuid",
+        "balance": 450.00
+      },
+      "amount": 100.00,
+      "processingFee": 1.00,
+      "netAmount": 99.00,
+      "status": "pending",
+      "payoutMethod": "mobile_money",
+      "mobileMoneyProvider": "MTN",
+      "mobileMoneyNumber": "0241234567",
+      "mobileMoneyAccountName": "John Doe",
+      "reference": "PAYOUT-1234567890-ABC123",
+      "requestIp": "192.168.1.1",
+      "createdAt": "2024-03-04T10:30:00Z",
+      "notes": "Weekly earnings withdrawal"
+    }
+  ],
+  "meta": {
+    "totalItems": 45,
+    "itemCount": 20,
+    "itemsPerPage": 20,
+    "totalPages": 3,
+    "currentPage": 1
+  }
+}
+```
+
+## Create Payout Request
+
+Request a payout from wallet balance (Rider only).
+
+### Endpoint
+
+```http
+POST /wallets/payout-request
+```
+
+### Authentication
+
+**Required Role**: `COURIER` (Rider)
+
+```bash
+Authorization: Bearer <rider_jwt_token>
+```
+
+### Request Body
+
+<ParamField body="amount" type="number" required>
+  Amount to withdraw (minimum: 1.00)
+</ParamField>
+
+<ParamField body="payoutMethod" type="enum" required>
+  Payout method: `mobile_money` or `bank_transfer`
+</ParamField>
+
+#### Mobile Money Fields
+
+<ParamField body="mobileMoneyProvider" type="string">
+  Mobile money provider (required for mobile money). Example: `MTN`, `Vodafone`, `AirtelTigo`
+</ParamField>
+
+<ParamField body="mobileMoneyNumber" type="string">
+  Mobile money number (required for mobile money). Example: `0241234567`
+</ParamField>
+
+<ParamField body="mobileMoneyAccountName" type="string">
+  Account holder name (required for mobile money)
+</ParamField>
+
+#### Bank Transfer Fields
+
+<ParamField body="accountNumber" type="string">
+  Bank account number (required for bank transfer)
+</ParamField>
+
+<ParamField body="accountName" type="string">
+  Account holder name (required for bank transfer)
+</ParamField>
+
+<ParamField body="bankName" type="string">
+  Bank name (required for bank transfer). Example: `Standard Bank`
+</ParamField>
+
+<ParamField body="bankCode" type="string">
+  Bank code (optional)
+</ParamField>
+
+#### Optional Fields
+
+<ParamField body="notes" type="string">
+  Additional notes for the request
+</ParamField>
+
+### Example Request (Mobile Money)
+
+```bash
+curl -X POST https://api.dpm-delivery.com/wallets/payout-request \
+  -H "Authorization: Bearer RIDER_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 100.00,
+    "payoutMethod": "mobile_money",
+    "mobileMoneyProvider": "MTN",
+    "mobileMoneyNumber": "0241234567",
+    "mobileMoneyAccountName": "John Doe",
+    "notes": "Weekly earnings withdrawal"
+  }'
+```
+
+### Example Request (Bank Transfer)
+
+```bash
+curl -X POST https://api.dpm-delivery.com/wallets/payout-request \
+  -H "Authorization: Bearer RIDER_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 500.00,
+    "payoutMethod": "bank_transfer",
+    "accountNumber": "1234567890",
+    "accountName": "John Doe",
+    "bankName": "Standard Bank",
+    "bankCode": "001",
+    "notes": "Monthly withdrawal"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "rider": {
+    "id": "rider-uuid",
+    "fullName": "John Doe"
+  },
+  "wallet": {
+    "id": "wallet-uuid",
+    "balance": 450.00
+  },
+  "amount": 100.00,
+  "processingFee": 1.00,
+  "netAmount": 99.00,
+  "status": "pending",
+  "payoutMethod": "mobile_money",
+  "mobileMoneyProvider": "MTN",
+  "mobileMoneyNumber": "0241234567",
+  "mobileMoneyAccountName": "John Doe",
+  "reference": "PAYOUT-1234567890-ABC123",
+  "requestIp": "192.168.1.1",
+  "createdAt": "2024-03-04T10:30:00Z",
+  "notes": "Weekly earnings withdrawal"
+}
+```
+
+### Validation Rules
+
+<Note>
+  **Important Validations**:
+  - Minimum withdrawal amount: GHS 10.00
+  - Must have sufficient balance in wallet
+  - Cannot have multiple pending payout requests
+  - Processing fee (1%) is automatically calculated
+</Note>
+
+### SMS Notifications
+
+When a payout request is created, SMS notifications are sent:
+
+1. **Admin Notification**: Alert admin about new payout request
+2. **Rider Confirmation**: Confirm request received
+
+Implementation: `/home/daytona/workspace/source/src/wallets/wallets.service.ts:285`
+
+## Update Payout Request Status
+
+Update the status of a payout request (Admin only).
+
+### Endpoint
+
+```http
+PATCH /wallets/payout-request/:id/update-status
+```
+
+### Authentication
+
+**Required Role**: `ADMIN`
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Payout request ID (UUID)
+</ParamField>
+
+### Request Body
+
+<ParamField body="status" type="enum" required>
+  New status: `approved`, `completed`, `rejected`, `failed`
+</ParamField>
+
+<ParamField body="rejectionReason" type="string">
+  Reason for rejection (required when status is `rejected`)
+</ParamField>
+
+<ParamField body="failureReason" type="string">
+  Reason for failure (required when status is `failed`)
+</ParamField>
+
+<ParamField body="notes" type="string">
+  Internal notes
+</ParamField>
+
+<ParamField body="externalReference" type="string">
+  External reference from payment provider
+</ParamField>
+
+<ParamField body="transactionId" type="string">
+  Transaction ID from payment provider
+</ParamField>
+
+### Example Request (Approve)
+
+```bash
+curl -X PATCH https://api.dpm-delivery.com/wallets/payout-request/550e8400-e29b-41d4-a716-446655440000/update-status \
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "approved",
+    "notes": "Verified and approved for processing"
+  }'
+```
+
+### Example Request (Complete)
+
+```bash
+curl -X PATCH https://api.dpm-delivery.com/wallets/payout-request/550e8400-e29b-41d4-a716-446655440000/update-status \
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "completed",
+    "transactionId": "PAY-12345-ABC",
+    "externalReference": "MTN-TX-67890",
+    "notes": "Payment sent successfully"
+  }'
+```
+
+### Example Request (Reject)
+
+```bash
+curl -X PATCH https://api.dpm-delivery.com/wallets/payout-request/550e8400-e29b-41d4-a716-446655440000/update-status \
+  -H "Authorization: Bearer ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "rejected",
+    "rejectionReason": "Insufficient documentation provided"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "amount": 100.00,
+  "status": "completed",
+  "approvedBy": {
+    "id": "admin-uuid",
+    "fullName": "Admin User"
+  },
+  "approvedAt": "2024-03-04T11:00:00Z",
+  "transactionId": "PAY-12345-ABC",
+  "externalReference": "MTN-TX-67890",
+  "completedAt": "2024-03-04T11:05:00Z"
+}
+```
+
+### Status Transition Rules
+
+<Warning>
+  **Important**: Cannot update status if payout is already `completed`
+</Warning>
+
+#### Valid Transitions
+
+- `pending` → `approved`, `rejected`, `cancelled`
+- `approved` → `completed`, `failed`
+- `rejected` → No further transitions
+- `completed` → No further transitions (locked)
+- `failed` → No further transitions
+
+### Balance Deduction
+
+When status is set to `COMPLETED`, the wallet balance is automatically debited:
+
+```typescript
+if (status === PayoutRequestStatus.COMPLETED) {
+  wallet.balance = currentBalance - payoutRequest.amount;
+  // Transaction record created with type WITHDRAWAL
+}
+```
+
+Implementation: `/home/daytona/workspace/source/src/wallets/wallets.service.ts:366`
+
+### Wallet Transaction Records
+
+Each status change creates a corresponding wallet transaction:
+
+| Status | Transaction Type |
+|--------|------------------|
+| `pending` | `payout_pending` |
+| `approved` | `payout_approved` |
+| `completed` | `withdrawal` |
+| `rejected` | `payout_rejected` |
+| `failed` | `payout_failed` |
+
+Implementation: `/home/daytona/workspace/source/src/wallets/wallets.service.ts:422`
+
+## Payout Request Entity
+
+Complete payout request object structure:
+
+<ResponseField name="id" type="string">
+  Unique identifier (UUID)
+</ResponseField>
+
+<ResponseField name="rider" type="User">
+  Rider who created the request
+</ResponseField>
+
+<ResponseField name="wallet" type="Wallet">
+  Associated wallet
+</ResponseField>
+
+<ResponseField name="amount" type="decimal">
+  Requested withdrawal amount
+</ResponseField>
+
+<ResponseField name="processingFee" type="decimal">
+  Processing fee (1% of amount)
+</ResponseField>
+
+<ResponseField name="netAmount" type="decimal">
+  Amount after fees
+</ResponseField>
+
+<ResponseField name="status" type="enum">
+  Current status: `pending`, `approved`, `completed`, `rejected`, `cancelled`, `failed`
+</ResponseField>
+
+<ResponseField name="payoutMethod" type="enum">
+  Payout method: `mobile_money` or `bank_transfer`
+</ResponseField>
+
+<ResponseField name="reference" type="string">
+  Unique internal reference (e.g., `PAYOUT-1234567890-ABC123`)
+</ResponseField>
+
+<ResponseField name="externalReference" type="string">
+  Payment provider reference
+</ResponseField>
+
+<ResponseField name="transactionId" type="string">
+  Transaction ID from payment provider
+</ResponseField>
+
+<ResponseField name="approvedBy" type="User">
+  Admin who approved the request
+</ResponseField>
+
+<ResponseField name="approvedAt" type="datetime">
+  Approval timestamp
+</ResponseField>
+
+<ResponseField name="processedBy" type="User">
+  Admin who processed the payout
+</ResponseField>
+
+<ResponseField name="completedAt" type="datetime">
+  Completion timestamp
+</ResponseField>
+
+<ResponseField name="rejectionReason" type="string">
+  Reason for rejection
+</ResponseField>
+
+<ResponseField name="failureReason" type="string">
+  Reason for failure
+</ResponseField>
+
+<ResponseField name="notes" type="string">
+  Internal notes
+</ResponseField>
+
+<ResponseField name="requestIp" type="string">
+  IP address of the request
+</ResponseField>
+
+<ResponseField name="retryCount" type="number">
+  Number of retry attempts
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Additional metadata (JSONB)
+</ResponseField>
+
+## Error Responses
+
+### Insufficient Balance
+
+```json
+{
+  "statusCode": 400,
+  "message": "Insufficient balance. Available: 50.00, Requested: 100.00",
+  "error": "Bad Request"
+}
+```
+
+### Pending Request Exists
+
+```json
+{
+  "statusCode": 400,
+  "message": "You already have a pending payout request. Please wait for it to be processed.",
+  "error": "Bad Request"
+}
+```
+
+### Minimum Amount Not Met
+
+```json
+{
+  "statusCode": 400,
+  "message": "Minimum withdrawal amount is 10",
+  "error": "Bad Request"
+}
+```
+
+### Request Not Found
+
+```json
+{
+  "statusCode": 404,
+  "message": "Payout request not found",
+  "error": "Not Found"
+}
+```
+
+### Already Completed
+
+```json
+{
+  "statusCode": 400,
+  "message": "Cannot approve a payout request with status: completed",
+  "error": "Bad Request"
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always verify balance before creating requests">
+    Check the wallet balance through the user/rider endpoints before allowing payout requests to prevent validation errors.
+  </Accordion>
+  
+  <Accordion title="Use proper status transitions">
+    Follow the documented status transition rules. Always mark as `approved` before `completed`.
+  </Accordion>
+  
+  <Accordion title="Store external references">
+    When processing payouts through payment providers, always store the `externalReference` and `transactionId` for reconciliation.
+  </Accordion>
+  
+  <Accordion title="Handle transaction failures gracefully">
+    Database transactions ensure data consistency. If a status update fails, the wallet balance is not affected.
+  </Accordion>
+  
+  <Accordion title="Filter by date range for reports">
+    Use `dateFrom` and `dateTo` query parameters to generate payout reports for specific periods.
+  </Accordion>
+</AccordionGroup>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Wallet Overview" icon="wallet" href="/api/wallets/overview">
+    Learn about the wallet system
+  </Card>
+  <Card title="Payment Integration" icon="credit-card" href="/api/payments/integration">
+    Understand payment flows
+  </Card>
+</CardGroup>

@@ -1,80 +1,398 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Get up and running with the DPM Delivery API in minutes
 ---
 
-## Get started in three steps
+This guide will help you set up the DPM Delivery API, configure your environment, and make your first API calls.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before you begin, ensure you have the following installed:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+- **Node.js** 16.x or higher
+- **PostgreSQL** 12.x or higher
+- **npm** or **yarn** package manager
+- **Git** for version control
 
-### Step 2: Deploy your changes
+You'll also need accounts for these third-party services:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
+- **Cloudinary** - For file uploads and image management
+- **Arkesel** or **Twilio** - For SMS notifications
+- **Kowri** or **Paystack** - For payment processing
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the DPM Delivery API repository from GitHub:
+
+    ```bash
+    git clone https://github.com/Felix-Asante/DPM-delivery-api.git
+    cd DPM-delivery-api
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install the required Node.js packages:
+
+    <CodeGroup>
+      ```bash npm
+      npm install
+      ```
+
+      ```bash yarn
+      yarn install
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Configure environment variables">
+    Copy the example environment file and configure your settings:
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Open `.env` in your editor and configure the required variables:
+
+    ```bash
+    # Server Configuration
+    PORT=8080
+    NODE_ENV=development
+
+    # Database Configuration
+    TYPEORM_HOST=localhost
+    TYPEORM_PORT=5432
+    TYPEORM_USERNAME=your_username
+    TYPEORM_PASSWORD=your_password
+    TYPEORM_DATABASE=dpm_delivery
+
+    # JWT Secret
+    JWT_SECRET=your-super-secret-jwt-key
+
+    # Cloudinary Configuration
+    CLOUDINARY_CLOUD_NAME=your_cloud_name
+    CLOUDINARY_API_KEY=your_api_key
+    CLOUDINARY_SECRET=your_api_secret
+
+    # SMS Service (Arkesel)
+    ARKESEL_KEY=your_arkesel_api_key
+    ARKESEL_ENDPOINT_V2=https://sms.arkesel.com/api/v2
+
+    # Payment Gateway (Kowri)
+    KOWRI_APP_ID=your_app_id
+    KOWRI_APP_SECRET=your_app_secret
+    KOWRI_EP=https://api.kowri.com
+
+    # Application URLs
+    FRONTEND_URL=http://localhost:3000
+    DASHBOARD_URL=http://localhost:3001
+    ADMIN_PHONE_NUMBER=+233241234567
+    RIDER_DEFAULT_PASSWORD=Rider123!
+    ```
+
+    <Note>
+      See the [Environment Setup](/guides/environment-setup) guide for detailed configuration of each variable.
+    </Note>
+  </Step>
+
+  <Step title="Set up the database">
+    Create your PostgreSQL database:
+
+    ```bash
+    createdb dpm_delivery
+    ```
+
+    Run the database migrations to create the schema:
+
+    ```bash
+    npm run migration:run
+    ```
+
+    <Accordion title="Migration output">
+      ```
+      query: SELECT * FROM current_schema()
+      query: SELECT version FROM "typeorm_migrations" ...
+      0 migrations are already loaded in the database.
+      1 migrations were found in the source code.
+      Migration UserEntity1234567890123 has been executed successfully.
+      ```
+    </Accordion>
+  </Step>
+
+  <Step title="Start the development server">
+    Launch the API server in development mode:
+
+    <CodeGroup>
+      ```bash npm
+      npm run start:dev
+      ```
+
+      ```bash yarn
+      yarn start:dev
+      ```
+    </CodeGroup>
+
+    The API will be available at `http://localhost:8080/api/v1/`
+
+    <Info>
+      The Swagger API documentation is automatically available at `http://localhost:8080/api/v1/doc`
+    </Info>
+  </Step>
+</Steps>
+
+## Make your first API call
+
+Now that the server is running, let's make some API calls to test the setup.
+
+### 1. Create a user account
+
+Register a new user account:
+
+<CodeGroup>
+  ```bash cURL
+  curl -X POST http://localhost:8080/api/v1/auth/signup \
+    -H "Content-Type: application/json" \
+    -d '{
+      "phone": "+233241234567",
+      "password": "SecurePass123!",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "USER"
+    }'
+  ```
+
+  ```javascript JavaScript
+  const response = await fetch('http://localhost:8080/api/v1/auth/signup', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      phone: '+233241234567',
+      password: 'SecurePass123!',
+      firstName: 'John',
+      lastName: 'Doe',
+      role: 'USER'
+    })
+  });
+
+  const data = await response.json();
+  console.log(data);
+  ```
+
+  ```python Python
+  import requests
+
+  response = requests.post(
+      'http://localhost:8080/api/v1/auth/signup',
+      json={
+          'phone': '+233241234567',
+          'password': 'SecurePass123!',
+          'firstName': 'John',
+          'lastName': 'Doe',
+          'role': 'USER'
+      }
+  )
+
+  print(response.json())
+  ```
+</CodeGroup>
+
+<Accordion title="Response">
+  ```json
+  {
+    "message": "User created successfully. Verification code sent to phone.",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "phone": "+233241234567",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "USER",
+      "isVerified": false,
+      "createdAt": "2024-03-04T10:30:00.000Z"
+    },
+    "verificationCode": "123456",
+    "expiresAt": "2024-03-04T10:45:00.000Z"
+  }
+  ```
 </Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+### 2. Verify your account
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Use the verification code sent to verify your account:
 
-### Step 3: Go live
+```bash cURL
+curl -X GET http://localhost:8080/api/v1/auth/verify-account/123456
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
+### 3. Login and get an access token
+
+Login with your credentials to receive a JWT token:
+
+<CodeGroup>
+  ```bash cURL
+  curl -X POST http://localhost:8080/api/v1/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{
+      "phone": "+233241234567",
+      "password": "SecurePass123!"
+    }'
+  ```
+
+  ```javascript JavaScript
+  const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      phone: '+233241234567',
+      password: 'SecurePass123!'
+    })
+  });
+
+  const { token } = await response.json();
+  ```
+</CodeGroup>
+
+<Accordion title="Response">
+  ```json
+  {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "phone": "+233241234567",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "USER",
+      "isVerified": true
+    }
+  }
+  ```
+</Accordion>
+
+### 4. Create a shipment (authenticated request)
+
+Use the JWT token to make an authenticated request:
+
+```bash cURL
+curl -X POST http://localhost:8080/api/v1/shipping \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "sender_name": "John Doe",
+    "sender_phone": "+233241234567",
+    "sender_address": "123 Main St, Accra",
+    "recipient_name": "Jane Smith",
+    "recipient_phone": "+233241234568",
+    "recipient_address": "456 Oak Ave, Kumasi",
+    "package_description": "Electronics",
+    "package_value": 500.00,
+    "shipment_option": "standard",
+    "mode_of_shipment": "Bike",
+    "city": "Nkawkaw"
+  }'
+```
+
+<Accordion title="Response">
+  ```json
+  {
+    "id": "650e8400-e29b-41d4-a716-446655440000",
+    "reference": "DPM-2024-001234",
+    "sender_name": "John Doe",
+    "recipient_name": "Jane Smith",
+    "status": "pending",
+    "shipment_option": "standard",
+    "mode_of_shipment": "Bike",
+    "createdAt": "2024-03-04T10:35:00.000Z"
+  }
+  ```
 </Accordion>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Authentication" icon="shield-halved" href="/authentication">
+    Learn about JWT authentication and role-based access control
+  </Card>
+  <Card title="Core concepts" icon="book-open" href="/concepts/architecture">
+    Understand the API architecture and design patterns
+  </Card>
+  <Card title="API reference" icon="code" href="/api/auth/signup">
+    Explore all available endpoints and their parameters
+  </Card>
+  <Card title="Integration guide" icon="plug" href="/guides/integration-guide">
+    Connect payment gateways, SMS services, and file storage
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Explore the Swagger documentation
+
+The API includes interactive Swagger documentation where you can test all endpoints:
+
+1. Open `http://localhost:8080/api/v1/doc` in your browser
+2. Click **Authorize** and enter your JWT token
+3. Try out any endpoint with the "Try it out" button
+
+<Tip>
+  The Swagger UI persists your authorization token, so you only need to enter it once per session.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Database connection error">
+    If you see `error: password authentication failed for user`, verify your PostgreSQL credentials in `.env`:
+
+    ```bash
+    TYPEORM_USERNAME=your_username
+    TYPEORM_PASSWORD=your_password
+    TYPEORM_HOST=localhost
+    ```
+
+    Ensure PostgreSQL is running:
+    ```bash
+    # On macOS with Homebrew
+    brew services start postgresql
+
+    # On Ubuntu/Debian
+    sudo systemctl start postgresql
+    ```
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    If port 8080 is already in use, change the `PORT` variable in your `.env` file:
+
+    ```bash
+    PORT=3000
+    ```
+
+    Then restart the server.
+  </Accordion>
+
+  <Accordion title="JWT authentication fails">
+    If you receive `401 Unauthorized` errors:
+
+    1. Verify your JWT token is valid and not expired
+    2. Ensure you're including the token in the Authorization header:
+       ```
+       Authorization: Bearer YOUR_JWT_TOKEN
+       ```
+    3. Check that your `JWT_SECRET` in `.env` matches the one used to sign the token
+  </Accordion>
+
+  <Accordion title="Phone verification code not received">
+    In development mode, the verification code is returned in the signup response. Check your SMS service configuration:
+
+    - Verify `ARKESEL_KEY` is correct
+    - Ensure the phone number format is valid (E.164 format with country code)
+    - Check the Arkesel dashboard for SMS delivery status
+  </Accordion>
+</AccordionGroup>
+
+## Need help?
+
+- Check the [Environment Setup](/guides/environment-setup) guide for detailed configuration
+- Review the [Error Handling](/guides/error-handling) guide for common issues
+- Explore the [API Reference](/api/auth/signup) for endpoint details

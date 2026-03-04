@@ -1,0 +1,183 @@
+---
+title: "Verify Account"
+description: "Verify a user account using the SMS verification code"
+---
+
+## Endpoint
+
+```
+GET /api/v1/auth/verify-account/:code
+```
+
+Verifies a user account using the verification code sent via SMS during signup. Once verified, the user can log in and use the system.
+
+## Path Parameters
+
+<ParamField path="code" type="string" required>
+  The 6-digit verification code sent via SMS to the user's phone number
+  
+  **Format**: 6-digit numeric string (e.g., "123456")
+</ParamField>
+
+## Response
+
+Returns the updated user object with verification status set to `true`.
+
+<ResponseField name="id" type="string">
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="fullName" type="string">
+  Full name of the user
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Phone number of the user
+</ResponseField>
+
+<ResponseField name="email" type="string | null">
+  Email address (if provided)
+</ResponseField>
+
+<ResponseField name="isVerified" type="boolean">
+  Account verification status (set to `true` after successful verification)
+</ResponseField>
+
+<ResponseField name="code" type="null">
+  Verification code (cleared after successful verification)
+</ResponseField>
+
+<ResponseField name="codeUseCase" type="null">
+  Code use case (cleared after successful verification)
+</ResponseField>
+
+<ResponseField name="codeExpiryDate" type="null">
+  Code expiry date (cleared after successful verification)
+</ResponseField>
+
+<ResponseField name="role" type="object">
+  User role information
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of account creation
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of last update
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X GET https://api.dpm-delivery.com/api/v1/auth/verify-account/123456
+```
+
+## Example Response
+
+<ResponseExample>
+```json 201 Success
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "fullName": "John Doe",
+  "phone": "+233201234567",
+  "email": null,
+  "address": null,
+  "isVerified": true,
+  "code": null,
+  "codeUseCase": null,
+  "codeExpiryDate": null,
+  "profilePicture": null,
+  "likes": [],
+  "role": {
+    "id": "role-uuid",
+    "name": "USER"
+  },
+  "isDefaultPassword": false,
+  "createdAt": "2026-03-04T12:00:00.000Z",
+  "updatedAt": "2026-03-04T12:15:00.000Z"
+}
+```
+
+```json 400 Bad Request - Code Expired
+{
+  "statusCode": 400,
+  "message": "Code has expired",
+  "error": "Bad Request"
+}
+```
+
+```json 400 Bad Request - Use Case Mismatch
+{
+  "statusCode": 400,
+  "message": "Code use case mismatch",
+  "error": "Bad Request"
+}
+```
+
+```json 404 Not Found - Invalid Code
+{
+  "statusCode": 404,
+  "message": "Invalid code",
+  "error": "Not Found"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "statusCode": 500,
+  "message": "Internal server error",
+  "error": "Internal Server Error"
+}
+```
+</ResponseExample>
+
+## Errors
+
+| Status Code | Description |
+|-------------|-------------|
+| 400 | Bad request - Code expired or use case mismatch |
+| 404 | Invalid verification code |
+| 500 | Internal server error |
+
+## Implementation Details
+
+**Source**: `src/auth/auth.controller.ts:53-60`
+
+**Service Method**: `authService.verifyAccount()` in `src/auth/auth.service.ts:165-177`
+
+**Swagger Decorators**:
+- `@ApiBadRequestResponse({ description: 'Bad request' })`
+- `@ApiInternalServerErrorResponse({ description: 'Internal server error' })`
+- `@ApiCreatedResponse({ description: 'Account verified successfully' })`
+- `@ApiNotFoundResponse()`
+
+**Verification Process**:
+1. Finds user by verification code in database
+2. Validates that code exists (throws `NotFoundException` if not found)
+3. Checks that code use case matches `"ACTIVATE_ACCOUNT"`
+4. Verifies that code has not expired using `isCodeExpired()` helper
+5. If valid:
+   - Sets `isVerified` to `true`
+   - Clears `code` field (sets to `null`)
+   - Clears `codeExpiryDate` field (sets to `null`)
+   - Clears `codeUseCase` field (sets to `null`)
+6. Saves and returns updated user object
+
+## Code Validation Rules
+
+**Use Case Validation**:
+- The code's `codeUseCase` must be `"ACTIVATE_ACCOUNT"`
+- If the code was generated for a different purpose (e.g., password reset), verification will fail with "Code use case mismatch" error
+
+**Expiry Validation**:
+- Codes have a limited validity period (set during signup)
+- Expired codes cannot be used and will return "Code has expired" error
+- Users must request a new verification code if theirs has expired
+
+## After Verification
+
+Once the account is verified (`isVerified: true`):
+1. User can log in using the [Login](/api/auth/login) endpoint
+2. Verification code is cleared and cannot be reused
+3. User gains full access to the DPM Delivery system

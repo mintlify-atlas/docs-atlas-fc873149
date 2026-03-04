@@ -1,0 +1,374 @@
+---
+title: 'Messages API'
+description: 'Real-time messaging system for communication between users'
+---
+
+## Overview
+
+The Messages API provides a messaging system for communication between users on the DPM Delivery platform. This feature enables customers, delivery partners, and place administrators to communicate regarding orders, bookings, and support.
+
+<Warning>
+  The Messages API is currently in early development. Most messaging endpoints are not yet implemented in the controller. Real-time messaging functionality may be handled through WebSocket connections or alternative channels.
+</Warning>
+
+## Authentication
+
+All messaging endpoints will require JWT authentication via Bearer token. Role-based access control will determine which users can message each other:
+- **USER**: Can message place administrators and support
+- **PLACE_ADMIN**: Can message users regarding bookings
+- **ADMIN**: Can access all conversations for moderation
+
+---
+
+## Current Implementation Status
+
+The messages controller is currently a placeholder with minimal implementation:
+
+```typescript
+@Controller('messages')
+export class MessagesController {
+  constructor(private readonly messagesService: MessagesService) {}
+}
+```
+
+<Info>
+  The messaging system is likely implemented through:
+  - WebSocket connections for real-time messaging
+  - Socket.IO or similar real-time communication library
+  - Separate gateway/service layer not exposed through REST endpoints
+</Info>
+
+---
+
+## Expected Endpoints (Future)
+
+Based on common messaging system patterns, the following endpoints are expected to be implemented:
+
+### Send Message
+
+**Endpoint:** `POST /messages` (planned)
+
+**Expected Request:**
+```json
+{
+  "recipientId": "uuid",
+  "content": "Hello, I have a question about my booking.",
+  "bookingId": "uuid" // optional context
+}
+```
+
+**Expected Response:**
+```json
+{
+  "id": "uuid",
+  "senderId": "uuid",
+  "recipientId": "uuid",
+  "content": "Hello, I have a question about my booking.",
+  "bookingId": "uuid",
+  "read": false,
+  "createdAt": "2026-03-04T10:00:00Z"
+}
+```
+
+---
+
+### Get Conversations
+
+**Endpoint:** `GET /messages/conversations` (planned)
+
+**Description:** Retrieve all conversations for the authenticated user.
+
+**Expected Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "participants": [
+      {
+        "id": "uuid",
+        "firstName": "John",
+        "lastName": "Doe"
+      },
+      {
+        "id": "uuid",
+        "firstName": "Jane",
+        "lastName": "Smith"
+      }
+    ],
+    "lastMessage": {
+      "content": "Thank you for your help!",
+      "createdAt": "2026-03-04T10:00:00Z",
+      "read": true
+    },
+    "unreadCount": 0
+  }
+]
+```
+
+---
+
+### Get Conversation Messages
+
+**Endpoint:** `GET /messages/conversations/:conversationId` (planned)
+
+**Expected Response:**
+```json
+{
+  "id": "uuid",
+  "participants": [
+    {
+      "id": "uuid",
+      "firstName": "John",
+      "lastName": "Doe"
+    }
+  ],
+  "messages": [
+    {
+      "id": "uuid",
+      "senderId": "uuid",
+      "content": "Hello, I have a question about my booking.",
+      "read": true,
+      "createdAt": "2026-03-04T09:00:00Z"
+    },
+    {
+      "id": "uuid",
+      "senderId": "uuid",
+      "content": "Of course! How can I help?",
+      "read": true,
+      "createdAt": "2026-03-04T09:05:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### Mark as Read
+
+**Endpoint:** `PUT /messages/:messageId/read` (planned)
+
+**Description:** Mark a specific message as read.
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "Message marked as read"
+}
+```
+
+---
+
+### Delete Message
+
+**Endpoint:** `DELETE /messages/:messageId` (planned)
+
+**Description:** Delete a message (soft delete or remove from view).
+
+---
+
+## WebSocket Events (Likely Implementation)
+
+Real-time messaging is typically implemented using WebSocket connections:
+
+### Client Events
+
+```javascript
+// Connect to messaging socket
+const socket = io('wss://api.dpm-delivery.com/messages', {
+  auth: {
+    token: 'YOUR_JWT_TOKEN'
+  }
+});
+
+// Send a message
+socket.emit('send_message', {
+  recipientId: 'uuid',
+  content: 'Hello!',
+  bookingId: 'uuid' // optional
+});
+
+// Join a conversation
+socket.emit('join_conversation', {
+  conversationId: 'uuid'
+});
+
+// Typing indicator
+socket.emit('typing', {
+  conversationId: 'uuid',
+  isTyping: true
+});
+```
+
+### Server Events
+
+```javascript
+// Receive new message
+socket.on('new_message', (message) => {
+  console.log('New message:', message);
+  // Update UI with new message
+});
+
+// User typing
+socket.on('user_typing', (data) => {
+  console.log(`${data.userId} is typing...`);
+});
+
+// Message read
+socket.on('message_read', (data) => {
+  console.log('Message read:', data.messageId);
+});
+
+// Error handling
+socket.on('error', (error) => {
+  console.error('Socket error:', error);
+});
+```
+
+---
+
+## Expected Data Structures
+
+### Message Object
+
+```typescript
+interface Message {
+  id: string;              // UUID
+  senderId: string;        // User UUID
+  recipientId: string;     // User UUID
+  conversationId: string;  // Conversation UUID
+  content: string;         // Message text
+  read: boolean;           // Read status
+  bookingId?: string;      // Optional booking context
+  orderId?: string;        // Optional order context
+  createdAt: string;       // ISO 8601 timestamp
+  updatedAt: string;       // ISO 8601 timestamp
+}
+```
+
+### Conversation Object
+
+```typescript
+interface Conversation {
+  id: string;              // UUID
+  participants: User[];    // Array of user objects
+  lastMessage: Message;    // Last message in conversation
+  unreadCount: number;     // Unread message count for current user
+  createdAt: string;       // ISO 8601 timestamp
+  updatedAt: string;       // ISO 8601 timestamp
+}
+```
+
+---
+
+## Expected Use Cases
+
+### Customer Support
+
+1. User creates a booking
+2. User has a question about the booking
+3. User initiates conversation with place admin
+4. Messages are exchanged in real-time
+5. Conversation is saved and can be referenced later
+
+### Order Communication
+
+1. Delivery partner needs to contact customer about delivery
+2. Partner sends message through the system
+3. Customer receives real-time notification
+4. Both parties can communicate about delivery details
+
+### Admin Moderation
+
+1. Admin monitors conversations for policy violations
+2. Admin can view all conversations
+3. Admin can delete inappropriate messages
+4. Admin can warn or suspend users if needed
+
+---
+
+## Privacy and Security Considerations
+
+### Message Encryption
+
+- Messages should be encrypted in transit (TLS/SSL)
+- Consider end-to-end encryption for sensitive conversations
+- Store message content securely in database
+
+### Access Control
+
+- Users can only access their own conversations
+- Admins have elevated access for moderation
+- Prevent message spoofing with proper authentication
+
+### Data Retention
+
+- Define message retention policies
+- Allow users to delete their messages
+- Archive old conversations
+- Comply with data privacy regulations (GDPR, etc.)
+
+---
+
+## Integration Points
+
+### Notifications
+
+Messages should trigger notifications:
+
+- Push notifications for mobile apps
+- Email notifications for unread messages
+- In-app notification badges
+
+### Context Linking
+
+Messages can be linked to:
+
+- **Bookings**: Discussion about specific reservations
+- **Orders**: Communication about deliveries
+- **Support Tickets**: Customer service conversations
+- **Reviews**: Follow-up on review feedback
+
+---
+
+## Development Roadmap
+
+To fully implement the messaging system:
+
+1. **Database Schema**
+   - Create Message and Conversation entities
+   - Set up proper relationships and indexes
+
+2. **WebSocket Gateway**
+   - Implement Socket.IO or WebSocket gateway
+   - Handle real-time message delivery
+   - Implement presence/typing indicators
+
+3. **REST Endpoints**
+   - Implement CRUD operations for messages
+   - Add conversation management endpoints
+   - Include search and filtering
+
+4. **Notifications**
+   - Integrate with notification system
+   - Implement push notifications
+   - Add email notifications
+
+5. **Moderation Tools**
+   - Build admin dashboard for monitoring
+   - Implement message flagging
+   - Add automated content filtering
+
+---
+
+## Alternative Implementation
+
+The messaging feature might be implemented using:
+
+- **Third-party services**: SendBird, Stream, Twilio
+- **Separate microservice**: Dedicated messaging service
+- **GraphQL subscriptions**: Real-time updates via GraphQL
+
+<Note>
+  For the most accurate and up-to-date information about the messaging implementation, check the `messages.service.ts` file or consult the development team.
+</Note>

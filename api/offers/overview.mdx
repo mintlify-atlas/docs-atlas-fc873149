@@ -1,0 +1,583 @@
+---
+title: 'Offers API'
+description: 'Manage promotional offers and discounts for places and products'
+---
+
+## Overview
+
+The Offers API allows you to create and manage promotional offers and discounts for both places and products. Offers can be configured with discount percentages, time periods, and associated with specific offer types.
+
+## Authentication
+
+All endpoints require JWT authentication via Bearer token. Different endpoints require different role permissions:
+- **ADMIN**: Full access to all offer management
+- **PLACE_ADMIN**: Can create and manage offers for their own places
+- **USER**: Can view offers
+
+---
+
+## Offer Types
+
+### Create Offer Type
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.dpm-delivery.com/offers/types \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Seasonal Discount"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.dpm-delivery.com/offers/types', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Seasonal Discount'
+  })
+});
+```
+</CodeGroup>
+
+**Endpoint:** `POST /offers/types`
+
+**Required Role:** ADMIN
+
+**Request Body:**
+<ParamField body="name" type="string" required>
+  The name of the offer type (e.g., "Flash Sale", "Seasonal Discount")
+</ParamField>
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "name": "Seasonal Discount",
+  "createdAt": "2026-03-04T10:00:00Z",
+  "updatedAt": "2026-03-04T10:00:00Z"
+}
+```
+
+---
+
+### Get All Offer Types
+
+<CodeGroup>
+```bash cURL
+curl -X GET https://api.dpm-delivery.com/offers/types \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.dpm-delivery.com/offers/types', {
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+**Endpoint:** `GET /offers/types`
+
+**Required Role:** ADMIN
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Flash Sale",
+    "createdAt": "2026-03-04T10:00:00Z",
+    "updatedAt": "2026-03-04T10:00:00Z"
+  },
+  {
+    "id": "uuid",
+    "name": "Seasonal Discount",
+    "createdAt": "2026-03-04T10:00:00Z",
+    "updatedAt": "2026-03-04T10:00:00Z"
+  }
+]
+```
+
+---
+
+### Get Offer Type by ID
+
+**Endpoint:** `GET /offers/types/:id`
+
+**Required Role:** ADMIN, PLACE_ADMIN
+
+**Path Parameters:**
+<ParamField path="id" type="string" required>
+  The UUID of the offer type
+</ParamField>
+
+---
+
+### Update Offer Type
+
+**Endpoint:** `PUT /offers/:id/types`
+
+**Required Role:** ADMIN
+
+**Path Parameters:**
+<ParamField path="id" type="string" required>
+  The UUID of the offer type to update
+</ParamField>
+
+**Request Body:**
+<ParamField body="name" type="string" required>
+  The updated name of the offer type
+</ParamField>
+
+---
+
+### Delete Offer Type
+
+**Endpoint:** `DELETE /offers/:id/types`
+
+**Required Role:** ADMIN
+
+**Path Parameters:**
+<ParamField path="id" type="string" required>
+  The UUID of the offer type to delete
+</ParamField>
+
+---
+
+### Get Offers by Type
+
+**Endpoint:** `GET /offers/types/:id/offers`
+
+**Required Role:** ADMIN, PLACE_ADMIN, USER
+
+**Path Parameters:**
+<ParamField path="id" type="string" required>
+  The UUID of the offer type
+</ParamField>
+
+**Response:**
+Returns all offers associated with the specified offer type.
+
+---
+
+## Offers Management
+
+### Create Offer
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.dpm-delivery.com/offers \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reductionPercent": 20,
+    "price": 1000,
+    "start_date": "2026-03-04T00:00:00Z",
+    "end_date": "2026-03-31T23:59:59Z",
+    "offerType": "uuid-of-offer-type",
+    "placeId": "uuid-of-place",
+    "title": "Spring Sale",
+    "description": "Get 20% off on all bookings this March"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.dpm-delivery.com/offers', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    reductionPercent: 20,
+    price: 1000,
+    start_date: '2026-03-04T00:00:00Z',
+    end_date: '2026-03-31T23:59:59Z',
+    offerType: 'uuid-of-offer-type',
+    placeId: 'uuid-of-place',
+    title: 'Spring Sale',
+    description: 'Get 20% off on all bookings this March'
+  })
+});
+```
+</CodeGroup>
+
+**Endpoint:** `POST /offers`
+
+**Required Role:** ADMIN, PLACE_ADMIN
+
+**Request Body:**
+<ParamField body="reductionPercent" type="number" required>
+  The discount percentage (e.g., 20 for 20% off)
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  The price after discount or minimum amount
+</ParamField>
+
+<ParamField body="start_date" type="string" required>
+  ISO 8601 date string for when the offer starts
+</ParamField>
+
+<ParamField body="end_date" type="string" required>
+  ISO 8601 date string for when the offer ends
+</ParamField>
+
+<ParamField body="offerType" type="string" required>
+  UUID of the offer type
+</ParamField>
+
+<ParamField body="placeId" type="string">
+  UUID of the place this offer applies to (optional, use for place-specific offers)
+</ParamField>
+
+<ParamField body="productId" type="string">
+  UUID of the product this offer applies to (optional, use for product-specific offers)
+</ParamField>
+
+<ParamField body="title" type="string">
+  Title of the offer
+</ParamField>
+
+<ParamField body="description" type="string">
+  Detailed description of the offer
+</ParamField>
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "reductionPercent": 20,
+  "price": 1000,
+  "start_date": "2026-03-04T00:00:00Z",
+  "end_date": "2026-03-31T23:59:59Z",
+  "title": "Spring Sale",
+  "description": "Get 20% off on all bookings this March",
+  "type": {
+    "id": "uuid",
+    "name": "Seasonal Discount"
+  },
+  "place": {
+    "id": "uuid",
+    "name": "Beach Resort"
+  },
+  "createdAt": "2026-03-04T10:00:00Z",
+  "updatedAt": "2026-03-04T10:00:00Z"
+}
+```
+
+---
+
+### Get All Offers
+
+<CodeGroup>
+```bash cURL
+curl -X GET "https://api.dpm-delivery.com/offers?page=1&limit=10&query=spring" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.dpm-delivery.com/offers?page=1&limit=10&query=spring', {
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+**Endpoint:** `GET /offers`
+
+**Query Parameters:**
+<ParamField query="page" type="number">
+  Page number for pagination (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Number of items per page (default: 10)
+</ParamField>
+
+<ParamField query="query" type="string">
+  Search query to filter offers by title or description
+</ParamField>
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "reductionPercent": 20,
+      "price": 1000,
+      "start_date": "2026-03-04T00:00:00Z",
+      "end_date": "2026-03-31T23:59:59Z",
+      "title": "Spring Sale",
+      "description": "Get 20% off on all bookings this March",
+      "type": {
+        "id": "uuid",
+        "name": "Seasonal Discount"
+      },
+      "place": {
+        "id": "uuid",
+        "name": "Beach Resort"
+      }
+    }
+  ],
+  "total": 50,
+  "page": 1,
+  "limit": 10
+}
+```
+
+---
+
+### Get Place Offers
+
+**Endpoint:** `GET /offers/place-offers`
+
+**Description:** Retrieves all offers that are associated with places (not products).
+
+**Response:**
+Returns an array of offers where `place` is not null.
+
+---
+
+### Get Product Offers
+
+**Endpoint:** `GET /offers/product-offers`
+
+**Description:** Retrieves all offers that are associated with products (not places).
+
+**Response:**
+Returns an array of offers where `product` is not null.
+
+---
+
+### Get Offer Count
+
+**Endpoint:** `GET /offers/count`
+
+**Required Role:** ADMIN, PLACE_ADMIN
+
+**Description:** Returns the total number of offers created by the authenticated user or for their place.
+
+**Response:**
+```json
+{
+  "count": 25
+}
+```
+
+---
+
+### Get Offer by ID
+
+<CodeGroup>
+```bash cURL
+curl -X GET https://api.dpm-delivery.com/offers/{id} \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.dpm-delivery.com/offers/{id}', {
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+**Endpoint:** `GET /offers/:id`
+
+**Required Role:** ADMIN, PLACE_ADMIN, USER
+
+**Path Parameters:**
+<ParamField path="id" type="string" required>
+  The UUID of the offer
+</ParamField>
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "reductionPercent": 20,
+  "price": 1000,
+  "start_date": "2026-03-04T00:00:00Z",
+  "end_date": "2026-03-31T23:59:59Z",
+  "title": "Spring Sale",
+  "description": "Get 20% off on all bookings this March",
+  "type": {
+    "id": "uuid",
+    "name": "Seasonal Discount"
+  },
+  "place": {
+    "id": "uuid",
+    "name": "Beach Resort",
+    "location": "Miami Beach"
+  },
+  "createdAt": "2026-03-04T10:00:00Z",
+  "updatedAt": "2026-03-04T10:00:00Z"
+}
+```
+
+---
+
+### Update Offer
+
+<CodeGroup>
+```bash cURL
+curl -X PUT https://api.dpm-delivery.com/offers/{id} \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reductionPercent": 25,
+    "title": "Extended Spring Sale",
+    "end_date": "2026-04-15T23:59:59Z"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.dpm-delivery.com/offers/{id}', {
+  method: 'PUT',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    reductionPercent: 25,
+    title: 'Extended Spring Sale',
+    end_date: '2026-04-15T23:59:59Z'
+  })
+});
+```
+</CodeGroup>
+
+**Endpoint:** `PUT /offers/:id`
+
+**Required Role:** ADMIN, PLACE_ADMIN
+
+**Path Parameters:**
+<ParamField path="id" type="string" required>
+  The UUID of the offer to update
+</ParamField>
+
+**Request Body:** Same fields as Create Offer (all optional)
+
+---
+
+### Delete Offer
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://api.dpm-delivery.com/offers/{id} \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.dpm-delivery.com/offers/{id}', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+**Endpoint:** `DELETE /offers/:id`
+
+**Required Role:** ADMIN, PLACE_ADMIN
+
+**Path Parameters:**
+<ParamField path="id" type="string" required>
+  The UUID of the offer to delete
+</ParamField>
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Offer deleted successfully"
+}
+```
+
+---
+
+## Data Structures
+
+### Offer Object
+
+<ResponseField name="id" type="string">
+  Unique identifier (UUID)
+</ResponseField>
+
+<ResponseField name="reductionPercent" type="number">
+  Discount percentage
+</ResponseField>
+
+<ResponseField name="price" type="number">
+  Price after discount or base price (default: 0)
+</ResponseField>
+
+<ResponseField name="start_date" type="string">
+  ISO 8601 date string for offer start date
+</ResponseField>
+
+<ResponseField name="end_date" type="string">
+  ISO 8601 date string for offer end date
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Offer title
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Offer description
+</ResponseField>
+
+<ResponseField name="type" type="object">
+  The offer type object with id and name
+</ResponseField>
+
+<ResponseField name="place" type="object">
+  Associated place object (if applicable)
+</ResponseField>
+
+<ResponseField name="product" type="object">
+  Associated product object (if applicable)
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  Last update timestamp
+</ResponseField>
+
+---
+
+## Use Cases
+
+### Creating a Place-Specific Offer
+
+1. First, ensure you have an offer type created
+2. Create an offer with `placeId` specified
+3. Set the discount percentage and validity period
+4. Users can view this offer when browsing the place
+
+### Creating a Product-Specific Offer
+
+1. Create an offer with `productId` specified instead of `placeId`
+2. The offer will apply to that specific product
+3. Can be used for product promotions or clearance sales
+
+### Managing Seasonal Sales
+
+1. Create an offer type like "Seasonal Sale"
+2. Create multiple offers with different start and end dates
+3. Update or delete offers as needed when campaigns end

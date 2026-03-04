@@ -1,0 +1,129 @@
+---
+title: "Shipping API Overview"
+description: "Complete reference for managing shipments, tracking deliveries, and assigning riders in the DPM Delivery system"
+---
+
+## Introduction
+
+The Shipping API provides comprehensive functionality for managing shipments within the DPM Delivery platform. This API handles the complete shipment lifecycle from creation to delivery, including rider assignment, cost management, and real-time tracking.
+
+## Base URL
+
+All shipping endpoints are prefixed with:
+
+```
+/api/v1/shipping
+```
+
+## Key Features
+
+- **Shipment Creation**: Create new shipment orders with pickup and delivery details
+- **Tracking**: Real-time tracking using reference numbers or shipment IDs
+- **Rider Management**: Assign and reassign riders to shipments
+- **Status Updates**: Update shipment history with photo uploads and confirmation codes
+- **Cost Management**: Set and manage delivery fees, rider commissions, and additional charges
+- **Multi-City Support**: Support for multiple cities (Nkawkaw, Koforidua, Donkorkrom)
+
+## Shipment Options
+
+The API supports four types of shipment delivery options:
+
+- `standard_delivery` - Standard delivery service
+- `express_delivery` - Expedited delivery
+- `special_delivery` - Special handling requirements
+- `bulk_delivery` - Bulk shipments
+
+## Mode of Shipment
+
+Three transportation modes are available:
+
+- `Bike` - Motorcycle delivery
+- `Aboboyaa` - Tricycle delivery
+- `Van` - Van delivery
+
+## Shipment Status Lifecycle
+
+Shipments progress through various statuses:
+
+1. `pending` - Initial shipment created
+2. `rider_assigned` - Rider has been assigned
+3. `pickup_confirmed` - Item picked up from sender
+4. `out_for_delivery` - Rider is delivering the package
+5. `in_transit` - Package in transit between locations
+6. `arrived` - Package arrived at destination facility
+7. `ready_for_pickup` - Ready for recipient pickup
+8. `delivered` - Successfully delivered
+9. `failed_delivery_attempt` - Delivery attempt failed
+10. `returned` - Package returned to sender
+11. `on_hold` - Shipment on hold
+12. `repackaged` - Item repackaged
+13. `payment_received` - Payment confirmed
+14. `refunded` - Payment refunded
+
+## Authentication
+
+Most endpoints require JWT Bearer authentication. Include the token in the Authorization header:
+
+```bash
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+## Role-Based Access
+
+Endpoints are protected by role-based access control:
+
+- **Admin**: Full access to all shipping operations
+- **Courier (Rider)**: Can view assigned shipments and update delivery status
+- **Public**: Can create shipments and track by reference number
+
+## Available Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Create Shipment" icon="box" href="/api/shipping/create-shipment">
+    POST /api/v1/shipping - Create a new shipment order
+  </Card>
+  
+  <Card title="Track Shipment" icon="location-dot" href="/api/shipping/track-shipment">
+    GET endpoints for tracking shipments by ID or reference
+  </Card>
+  
+  <Card title="Rider Assignment" icon="user-helmet-safety" href="/api/shipping/rider-assignment">
+    PATCH /api/v1/shipping/:id/assign-rider/:riderId
+  </Card>
+  
+  <Card title="Cost Management" icon="dollar-sign" href="/api/shipping/cost-management">
+    PATCH /api/v1/shipping/:id/set-cost
+  </Card>
+</CardGroup>
+
+## Common Response Format
+
+All endpoints return responses in a consistent format:
+
+```json
+{
+  "success": true,
+  "data": {
+    // Response data
+  },
+  "message": "Operation completed successfully"
+}
+```
+
+Error responses include:
+
+```json
+{
+  "success": false,
+  "error": "Error message",
+  "statusCode": 400
+}
+```
+
+## Rate Limiting
+
+API requests may be subject to rate limiting. Monitor response headers for rate limit information.
+
+## Support
+
+For API support and questions, contact the development team or refer to the main API documentation.

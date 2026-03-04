@@ -1,0 +1,412 @@
+---
+title: 'Categories API'
+description: 'Manage business categories for classifying places in the DPM Delivery platform'
+---
+
+## Introduction
+
+The Categories API manages **business categories** that classify places by their type (e.g., Restaurants, Pharmacies, Grocery Stores). These are global, system-wide categories managed exclusively by super administrators.
+
+<Warning>
+**Not to be confused with Product Categories**
+
+Categories (this API) classify **places** (e.g., "Restaurants", "Pharmacies").
+
+Product Categories classify **products within a place** (e.g., "Main Dishes", "Beverages").
+
+See [Products API](/api/products/overview) for product category management.
+</Warning>
+
+## Base URL
+
+```
+POST   /categories
+GET    /categories
+GET    /categories/:id
+GET    /categories/:slug/slug
+GET    /categories/:slug/places
+PUT    /categories/:id
+DELETE /categories/:id
+```
+
+## Category Structure
+
+<ResponseField name="id" type="string" required>
+  Unique identifier (UUID)
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Category name (e.g., "Restaurants", "Pharmacies")
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly identifier (auto-generated from name)
+  
+  Example: "Restaurants" → "restaurants"
+</ResponseField>
+
+<ResponseField name="image" type="string" required>
+  Category icon/image URL
+</ResponseField>
+
+<ResponseField name="place" type="array">
+  Places belonging to this category
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  Last update timestamp
+</ResponseField>
+
+<Note>
+The `imgId` field (used for image deletion) is automatically removed from JSON responses.
+</Note>
+
+## Permissions
+
+- **ADMIN**: Full access (create, update, delete categories)
+- **Public**: Read-only access (view categories and browse places by category)
+
+---
+
+## Create Category
+
+Create a new business category.
+
+```http
+POST /categories
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Category name
+</ParamField>
+
+<ParamField body="picture" type="file" required>
+  Category icon/image (multipart/form-data)
+  
+  Must be a valid image file.
+</ParamField>
+
+### Example Request
+
+```http
+POST /categories
+Content-Type: multipart/form-data
+Authorization: Bearer {token}
+
+name=Restaurants
+picture=@restaurant-icon.png
+```
+
+### Response
+
+```json
+{
+  "id": "cat-123e4567-e89b-12d3-a456-426614174000",
+  "name": "Restaurants",
+  "slug": "restaurants",
+  "image": "https://storage.example.com/categories/restaurant-icon.png",
+  "createdAt": "2024-03-04T10:00:00Z",
+  "updatedAt": "2024-03-04T10:00:00Z"
+}
+```
+
+---
+
+## Update Category
+
+Update an existing category's details.
+
+```http
+PUT /categories/:id
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Category ID (UUID)
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string">
+  New category name
+  
+  If updated, the slug will be automatically regenerated.
+</ParamField>
+
+<ParamField body="picture" type="file">
+  New category image (multipart/form-data)
+  
+  If not provided, existing image is retained.
+</ParamField>
+
+### Response
+
+Returns the updated category object.
+
+---
+
+## Get All Categories
+
+Retrieve all business categories.
+
+```http
+GET /categories
+```
+
+**Authentication**: Not required
+
+### Response
+
+```json
+[
+  {
+    "id": "cat-123",
+    "name": "Restaurants",
+    "slug": "restaurants",
+    "image": "https://storage.example.com/categories/restaurant-icon.png"
+  },
+  {
+    "id": "cat-456",
+    "name": "Pharmacies",
+    "slug": "pharmacies",
+    "image": "https://storage.example.com/categories/pharmacy-icon.png"
+  },
+  {
+    "id": "cat-789",
+    "name": "Grocery Stores",
+    "slug": "grocery-stores",
+    "image": "https://storage.example.com/categories/grocery-icon.png"
+  }
+]
+```
+
+---
+
+## Get Category by ID
+
+Retrieve a single category by its UUID.
+
+```http
+GET /categories/:id
+```
+
+**Authentication**: Not required
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Category ID (UUID)
+</ParamField>
+
+### Response
+
+```json
+{
+  "id": "cat-123e4567-e89b-12d3-a456-426614174000",
+  "name": "Restaurants",
+  "slug": "restaurants",
+  "image": "https://storage.example.com/categories/restaurant-icon.png",
+  "createdAt": "2024-03-04T10:00:00Z",
+  "updatedAt": "2024-03-04T10:00:00Z"
+}
+```
+
+---
+
+## Get Category by Slug
+
+Retrieve a category by its URL-friendly slug.
+
+```http
+GET /categories/:slug/slug
+```
+
+**Authentication**: Not required
+
+### Path Parameters
+
+<ParamField path="slug" type="string" required>
+  Category slug (e.g., "restaurants", "pharmacies")
+</ParamField>
+
+### Example
+
+```http
+GET /categories/restaurants/slug
+```
+
+---
+
+## Get Places by Category
+
+Retrieve all places belonging to a specific category.
+
+```http
+GET /categories/:slug/places
+```
+
+**Authentication**: Not required
+
+### Path Parameters
+
+<ParamField path="slug" type="string" required>
+  Category slug
+</ParamField>
+
+### Example
+
+```http
+GET /categories/restaurants/places
+```
+
+### Response
+
+```json
+{
+  "category": {
+    "id": "cat-123",
+    "name": "Restaurants",
+    "slug": "restaurants"
+  },
+  "places": [
+    {
+      "id": "place-456",
+      "name": "Golden Spoon Restaurant",
+      "slug": "golden-spoon-restaurant",
+      "address": "123 Main St, Accra",
+      "rating": 4.5,
+      "averagePrice": 50,
+      "deliveryFee": 10
+    },
+    {
+      "id": "place-789",
+      "name": "Tasty Bites",
+      "slug": "tasty-bites",
+      "address": "456 Oak Ave, Kumasi",
+      "rating": 4.2,
+      "averagePrice": 35,
+      "deliveryFee": 8
+    }
+  ]
+}
+```
+
+---
+
+## Delete Category
+
+Permanently delete a category.
+
+```http
+DELETE /categories/:id
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Category ID (UUID)
+</ParamField>
+
+### Response
+
+```json
+{
+  "message": "Category deleted successfully"
+}
+```
+
+<Warning>
+Before deleting a category, ensure no places are assigned to it. Deleting a category with associated places may cause data integrity issues.
+</Warning>
+
+---
+
+## Get Total Categories Count
+
+Get the total number of categories in the system.
+
+```http
+GET /categories/all/count
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+### Response
+
+```json
+{
+  "total": 12
+}
+```
+
+---
+
+## Use Cases
+
+### Browse Places by Type
+
+Users can discover places by browsing categories:
+
+1. **Get all categories**: `GET /categories`
+2. **Select a category**: User clicks "Restaurants"
+3. **View places**: `GET /categories/restaurants/places`
+
+### Filter Places in Search
+
+Combine category filtering with place search:
+
+```http
+GET /places/search?query=pizza&category=cat-123
+```
+
+Or with geolocation:
+
+```http
+GET /places?category=cat-123&latitude=5.6037&longitude=-0.1870
+```
+
+### Admin Dashboard
+
+Super admins can:
+- View total categories: `GET /categories/all/count`
+- Manage category list: `GET /categories`
+- Update category icons: `PUT /categories/:id`
+
+---
+
+## Common Categories
+
+Typical categories in a delivery platform:
+
+- **Restaurants** - Food delivery
+- **Pharmacies** - Medicine and healthcare
+- **Grocery Stores** - Supermarkets and convenience stores
+- **Bakeries** - Bread, cakes, pastries
+- **Liquor Stores** - Alcoholic beverages
+- **Pet Supplies** - Pet food and accessories
+- **Electronics** - Electronics and gadgets
+- **Flowers** - Flower shops and florists
+
+---
+
+## Related Resources
+
+- [Places API](/api/places/overview) - Vendor management
+- [Products API](/api/products/overview) - Product categories (different from business categories)

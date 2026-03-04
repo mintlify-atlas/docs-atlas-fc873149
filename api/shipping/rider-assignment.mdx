@@ -1,0 +1,391 @@
+---
+title: "Rider Assignment"
+description: "Assign riders to shipments and update shipment history with status changes"
+---
+
+## Overview
+
+This page covers two related operations: assigning riders to shipments and updating shipment status history. Both are critical for managing the shipment lifecycle.
+
+---
+
+## Assign Rider to Shipment
+
+```
+PATCH /api/v1/shipping/:id/assign-rider/:riderId
+```
+
+Assigns a rider (courier) to a shipment order. This automatically updates the shipment status to `rider_assigned` and triggers notifications to both the rider and the customer.
+
+### Authentication
+
+Required - Bearer token
+
+### Roles
+
+- **Admin** - Full access
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the shipment to assign
+</ParamField>
+
+<ParamField path="riderId" type="string" required>
+  The unique identifier of the rider to assign to this shipment
+</ParamField>
+
+### Request Example
+
+```bash
+curl -X PATCH https://api.dpmdelivery.com/api/v1/shipping/550e8400-e29b-41d4-a716-446655440000/assign-rider/rider-123 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "reference": "DPM-2026-003045",
+    "status": "rider_assigned",
+    "pickupCity": "Nkawkaw",
+    "pickupArea": "Zongo Junction, near the market",
+    "dropOffCity": "Koforidua",
+    "dropOffArea": "Galloway, opposite the police station",
+    "senderPhone": "+233244123456",
+    "recipientPhone": "+233209876543",
+    "shipmentOption": "express_delivery",
+    "modeOfShipment": "Bike",
+    "rider": {
+      "id": "rider-123",
+      "name": "John Mensah",
+      "phone": "+233201234567",
+      "email": "john.mensah@dpmdelivery.com"
+    },
+    "history": [
+      {
+        "id": "hist-1",
+        "status": "pending",
+        "description": "Shipment created",
+        "createdAt": "2026-03-04T10:30:00.000Z"
+      },
+      {
+        "id": "hist-2",
+        "status": "rider_assigned",
+        "description": "Rider John Mensah assigned",
+        "data": {
+          "rider_id": "rider-123",
+          "rider_name": "John Mensah"
+        },
+        "createdAt": "2026-03-04T11:00:00.000Z"
+      }
+    ],
+    "updatedAt": "2026-03-04T11:00:00.000Z"
+  },
+  "message": "Rider assigned successfully"
+}
+```
+
+### Error Responses
+
+#### 404 Not Found - Shipment Not Found
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Shipment not found",
+  "error": "Not Found"
+}
+```
+
+#### 404 Not Found - Rider Not Found
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Rider not found or is not active",
+  "error": "Not Found"
+}
+```
+
+#### 400 Bad Request - Already Assigned
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "This shipment already has a rider assigned",
+  "error": "Bad Request"
+}
+```
+
+### Implementation Notes
+
+- Assigning a rider automatically creates a history entry with status `rider_assigned`
+- The system sends SMS/email notifications to the rider informing them of the new assignment
+- Customer notifications are sent informing them that a rider has been assigned
+- If a shipment already has a rider, this endpoint will fail. Use the reassign functionality instead
+- The rider must have role `COURIER` and be active in the system
+
+---
+
+## Update Shipment History
+
+```
+PATCH /api/v1/shipping/:id/update-history
+```
+
+Updates the shipment status and creates a new history entry. This endpoint supports file uploads for proof of pickup/delivery photos and is used by riders to update shipment progress.
+
+### Authentication
+
+Required - Bearer token
+
+### Roles
+
+- **Admin** - Full access
+- **Courier (Rider)** - Can update their assigned shipments
+
+### Content Type
+
+```
+multipart/form-data
+```
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the shipment to update
+</ParamField>
+
+### Form Data Fields
+
+<ParamField body="status" type="enum" required>
+  The new status for the shipment
+  
+  **Allowed values:**
+  - `pending`
+  - `rider_assigned`
+  - `pickup_confirmed` - Package picked up from sender
+  - `out_for_delivery` - Rider is en route to delivery location
+  - `in_transit` - Package in transit between locations
+  - `arrived` - Package arrived at destination facility
+  - `ready_for_pickup` - Ready for recipient pickup
+  - `delivered` - Successfully delivered to recipient
+  - `failed_delivery_attempt` - Delivery attempt failed
+  - `returned` - Package returned to sender
+  - `on_hold` - Shipment temporarily on hold
+  - `repackaged` - Item repackaged
+  - `payment_received` - Payment confirmed
+  - `refunded` - Payment refunded
+  - `rider_reassigned` - Rider reassigned
+</ParamField>
+
+<ParamField body="description" type="string">
+  Description or reason for the status update. Required when status is `failed_delivery_attempt`
+  
+  Example: "Recipient not available", "Wrong address", "Package damaged"
+</ParamField>
+
+<ParamField body="confirmationCode" type="string">
+  Delivery confirmation code provided by recipient. Typically required for `delivered` status
+</ParamField>
+
+<ParamField body="photo" type="file">
+  Photo proof of pickup or delivery. Accepts image files (JPEG, PNG, etc.)
+  
+  - Maximum file size: 5MB
+  - Supported formats: JPEG, PNG, GIF
+  - Recommended for `pickup_confirmed` and `delivered` statuses
+</ParamField>
+
+<ParamField body="isPaid" type="string">
+  String representation of boolean indicating if payment was collected ("true" or "false")
+</ParamField>
+
+### Request Example
+
+```bash
+curl -X PATCH https://api.dpmdelivery.com/api/v1/shipping/550e8400-e29b-41d4-a716-446655440000/update-history \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -F "status=pickup_confirmed" \
+  -F "description=Package picked up successfully" \
+  -F "photo=@/path/to/pickup-photo.jpg"
+```
+
+### JavaScript Example with File Upload
+
+```javascript
+const formData = new FormData();
+formData.append('status', 'delivered');
+formData.append('confirmationCode', 'ABC123');
+formData.append('description', 'Delivered to recipient');
+formData.append('isPaid', 'true');
+formData.append('photo', fileInput.files[0]);
+
+const response = await fetch(
+  'https://api.dpmdelivery.com/api/v1/shipping/550e8400-e29b-41d4-a716-446655440000/update-history',
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer YOUR_JWT_TOKEN'
+    },
+    body: formData
+  }
+);
+
+const result = await response.json();
+```
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "reference": "DPM-2026-003045",
+    "status": "pickup_confirmed",
+    "confirmationCode": "ABC123",
+    "history": [
+      {
+        "id": "hist-1",
+        "status": "pending",
+        "description": "Shipment created",
+        "createdAt": "2026-03-04T10:30:00.000Z"
+      },
+      {
+        "id": "hist-2",
+        "status": "rider_assigned",
+        "description": "Rider John Mensah assigned",
+        "data": {
+          "rider_id": "rider-123",
+          "rider_name": "John Mensah"
+        },
+        "createdAt": "2026-03-04T11:00:00.000Z"
+      },
+      {
+        "id": "hist-3",
+        "status": "pickup_confirmed",
+        "description": "Package picked up successfully",
+        "data": {
+          "status": "pickup_confirmed",
+          "photo": "https://storage.dpmdelivery.com/shipments/550e8400-e29b-41d4-a716-446655440000/pickup-photo.jpg"
+        },
+        "createdAt": "2026-03-04T12:30:00.000Z"
+      }
+    ],
+    "updatedAt": "2026-03-04T12:30:00.000Z"
+  },
+  "message": "Shipment history updated successfully"
+}
+```
+
+### Error Responses
+
+#### 400 Bad Request - Missing Required Description
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Description is required for failed delivery attempts",
+  "error": "Bad Request"
+}
+```
+
+#### 400 Bad Request - Invalid File Type
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Only image files are allowed",
+  "error": "Bad Request"
+}
+```
+
+#### 403 Forbidden - Not Assigned Rider
+
+```json
+{
+  "success": false,
+  "statusCode": 403,
+  "message": "You can only update shipments assigned to you",
+  "error": "Forbidden"
+}
+```
+
+#### 404 Not Found
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Shipment not found",
+  "error": "Not Found"
+}
+```
+
+## Common Status Update Workflows
+
+### Pickup Workflow
+
+1. Rider arrives at pickup location
+2. Rider takes a photo of the package
+3. Update status to `pickup_confirmed` with photo
+
+```bash
+curl -X PATCH .../update-history \
+  -F "status=pickup_confirmed" \
+  -F "description=Package picked up from sender" \
+  -F "photo=@package.jpg"
+```
+
+### Delivery Workflow
+
+1. Rider arrives at delivery location
+2. Recipient provides confirmation code
+3. Rider takes photo of delivered package
+4. Update status to `delivered`
+
+```bash
+curl -X PATCH .../update-history \
+  -F "status=delivered" \
+  -F "confirmationCode=ABC123" \
+  -F "description=Delivered to recipient" \
+  -F "isPaid=true" \
+  -F "photo=@delivery.jpg"
+```
+
+### Failed Delivery Workflow
+
+1. Delivery attempt fails
+2. Rider provides reason
+3. Update status to `failed_delivery_attempt`
+
+```bash
+curl -X PATCH .../update-history \
+  -F "status=failed_delivery_attempt" \
+  -F "description=Recipient not available - will retry tomorrow"
+```
+
+## Implementation Notes
+
+- Photos are stored securely and accessible via HTTPS URLs
+- Status updates automatically trigger customer notifications via SMS/email
+- The `confirmationCode` is validated against the shipment's stored code for `delivered` status
+- Riders can only update shipments assigned to them unless they have Admin role
+- File uploads are limited to image formats only (validated by `imageFileFilter`)
+- The current user is automatically tracked in the history entry
+
+## Related Endpoints
+
+- [Create Shipment](/api/shipping/create-shipment) - Create new shipment
+- [Track Shipment](/api/shipping/track-shipment) - View shipment status and history
+- [Cost Management](/api/shipping/cost-management) - Set delivery costs

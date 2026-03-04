@@ -1,0 +1,409 @@
+---
+title: "Track Shipment"
+description: "Track and retrieve shipment details using various methods"
+---
+
+## Overview
+
+The Shipping API provides multiple endpoints for tracking and retrieving shipment information. Depending on your use case and access level, you can track shipments by reference number (public), shipment ID, rider ID, or retrieve all shipments.
+
+## Get All Shipments
+
+```
+GET /api/v1/shipping
+```
+
+Retrieve a paginated list of all shipments. Requires authentication.
+
+### Authentication
+
+Required - Bearer token
+
+### Roles
+
+- **Admin** - Can view all shipments
+- **Courier (Rider)** - Can only view their assigned shipments
+
+### Query Parameters
+
+<ParamField query="status" type="enum">
+  Filter shipments by status
+  
+  **Allowed values:**
+  - `pending`
+  - `rider_assigned`
+  - `pickup_confirmed`
+  - `out_for_delivery`
+  - `in_transit`
+  - `arrived`
+  - `ready_for_pickup`
+  - `delivered`
+  - `failed_delivery_attempt`
+  - `returned`
+  - `on_hold`
+  - `repackaged`
+  - `payment_received`
+  - `refunded`
+  - `rider_reassigned`
+</ParamField>
+
+<ParamField query="page" type="number">
+  Page number for pagination (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Number of items per page (default: 10)
+</ParamField>
+
+<ParamField query="query" type="string">
+  Search query to filter shipments by reference, sender phone, or recipient phone
+</ParamField>
+
+### Request Example
+
+```bash
+curl -X GET "https://api.dpmdelivery.com/api/v1/shipping?status=out_for_delivery&page=1&limit=20" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "reference": "DPM-2026-003045",
+        "status": "out_for_delivery",
+        "pickupCity": "Nkawkaw",
+        "pickupArea": "Zongo Junction",
+        "dropOffCity": "Koforidua",
+        "dropOffArea": "Galloway",
+        "senderPhone": "+233244123456",
+        "recipientPhone": "+233209876543",
+        "shipmentOption": "express_delivery",
+        "modeOfShipment": "Bike",
+        "rider": {
+          "id": "rider-123",
+          "name": "John Mensah",
+          "phone": "+233201234567"
+        },
+        "shipmentCost": {
+          "pickupFee": 10.00,
+          "deliveryFee": 25.00,
+          "riderCommission": 15.00,
+          "totalCost": 35.00,
+          "paid": false
+        },
+        "createdAt": "2026-03-04T10:30:00.000Z",
+        "updatedAt": "2026-03-04T14:20:00.000Z"
+      }
+    ],
+    "total": 45,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+---
+
+## Get Shipment by ID
+
+```
+GET /api/v1/shipping/:id
+```
+
+Retrieve detailed information about a specific shipment by its ID.
+
+### Authentication
+
+Required - Bearer token
+
+### Roles
+
+- **Admin** - Full access
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the shipment
+</ParamField>
+
+### Request Example
+
+```bash
+curl -X GET https://api.dpmdelivery.com/api/v1/shipping/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "reference": "DPM-2026-003045",
+    "status": "out_for_delivery",
+    "pickupCity": "Nkawkaw",
+    "pickupArea": "Zongo Junction, near the market",
+    "senderPhone": "+233244123456",
+    "pickupDate": "2026-03-05T09:00:00.000Z",
+    "dropOffCity": "Koforidua",
+    "dropOffArea": "Galloway, opposite the police station",
+    "recipientPhone": "+233209876543",
+    "dropOffDate": "2026-03-05T15:00:00.000Z",
+    "extraInformation": "Fragile items - handle with care",
+    "shipmentOption": "express_delivery",
+    "modeOfShipment": "Bike",
+    "confirmationCode": "ABC123",
+    "rider": {
+      "id": "rider-123",
+      "name": "John Mensah",
+      "phone": "+233201234567",
+      "email": "john.mensah@dpmdelivery.com"
+    },
+    "shipmentCost": {
+      "id": "cost-456",
+      "pickupFee": 10.00,
+      "deliveryFee": 25.00,
+      "riderCommission": 15.00,
+      "repackagingFee": 0,
+      "totalCost": 35.00,
+      "paid": false,
+      "paidAt": null
+    },
+    "history": [
+      {
+        "id": "hist-1",
+        "status": "pending",
+        "description": "Shipment created",
+        "createdAt": "2026-03-04T10:30:00.000Z"
+      },
+      {
+        "id": "hist-2",
+        "status": "rider_assigned",
+        "description": "Rider John Mensah assigned",
+        "data": {
+          "rider_id": "rider-123",
+          "rider_name": "John Mensah"
+        },
+        "createdAt": "2026-03-04T11:00:00.000Z"
+      },
+      {
+        "id": "hist-3",
+        "status": "pickup_confirmed",
+        "description": "Package picked up",
+        "data": {
+          "photo": "https://storage.dpmdelivery.com/pickups/photo123.jpg"
+        },
+        "createdAt": "2026-03-04T12:30:00.000Z"
+      },
+      {
+        "id": "hist-4",
+        "status": "out_for_delivery",
+        "description": "Out for delivery",
+        "createdAt": "2026-03-04T14:20:00.000Z"
+      }
+    ],
+    "createdAt": "2026-03-04T10:30:00.000Z",
+    "updatedAt": "2026-03-04T14:20:00.000Z"
+  }
+}
+```
+
+---
+
+## Track by Reference Number
+
+```
+GET /api/v1/shipping/reference/:reference
+```
+
+Track a shipment using its public reference number. This endpoint does not require authentication and can be used by customers to track their shipments.
+
+### Authentication
+
+Not required
+
+### Path Parameters
+
+<ParamField path="reference" type="string" required>
+  The shipment tracking reference number (e.g., DPM-2026-003045)
+</ParamField>
+
+### Request Example
+
+```bash
+curl -X GET https://api.dpmdelivery.com/api/v1/shipping/reference/DPM-2026-003045
+```
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "reference": "DPM-2026-003045",
+    "status": "out_for_delivery",
+    "pickupCity": "Nkawkaw",
+    "pickupArea": "Zongo Junction",
+    "dropOffCity": "Koforidua",
+    "dropOffArea": "Galloway",
+    "shipmentOption": "express_delivery",
+    "modeOfShipment": "Bike",
+    "estimatedDelivery": "2026-03-05T15:00:00.000Z",
+    "history": [
+      {
+        "status": "pending",
+        "description": "Shipment created",
+        "createdAt": "2026-03-04T10:30:00.000Z"
+      },
+      {
+        "status": "rider_assigned",
+        "description": "Rider assigned to your shipment",
+        "createdAt": "2026-03-04T11:00:00.000Z"
+      },
+      {
+        "status": "pickup_confirmed",
+        "description": "Package picked up from sender",
+        "createdAt": "2026-03-04T12:30:00.000Z"
+      },
+      {
+        "status": "out_for_delivery",
+        "description": "Your package is out for delivery",
+        "createdAt": "2026-03-04T14:20:00.000Z"
+      }
+    ],
+    "createdAt": "2026-03-04T10:30:00.000Z"
+  }
+}
+```
+
+---
+
+## Get Rider's Shipments
+
+```
+GET /api/v1/shipping/riders/:riderId
+```
+
+Retrieve all shipments assigned to a specific rider.
+
+### Authentication
+
+Required - Bearer token
+
+### Roles
+
+- **Admin** - Full access
+
+### Path Parameters
+
+<ParamField path="riderId" type="string" required>
+  The unique identifier of the rider
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="status" type="enum">
+  Filter by shipment status
+</ParamField>
+
+<ParamField query="page" type="number">
+  Page number for pagination (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Number of items per page (default: 10)
+</ParamField>
+
+<ParamField query="query" type="string">
+  Search query
+</ParamField>
+
+### Request Example
+
+```bash
+curl -X GET "https://api.dpmdelivery.com/api/v1/shipping/riders/rider-123?status=out_for_delivery" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "reference": "DPM-2026-003045",
+        "status": "out_for_delivery",
+        "pickupCity": "Nkawkaw",
+        "dropOffCity": "Koforidua",
+        "shipmentOption": "express_delivery",
+        "modeOfShipment": "Bike",
+        "createdAt": "2026-03-04T10:30:00.000Z"
+      }
+    ],
+    "total": 12,
+    "page": 1,
+    "limit": 10
+  }
+}
+```
+
+---
+
+## Error Responses
+
+### 404 Not Found - Shipment Not Found
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Shipment not found",
+  "error": "Not Found"
+}
+```
+
+### 401 Unauthorized
+
+```json
+{
+  "success": false,
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "Unauthorized"
+}
+```
+
+### 403 Forbidden - Insufficient Permissions
+
+```json
+{
+  "success": false,
+  "statusCode": 403,
+  "message": "You do not have permission to access this resource",
+  "error": "Forbidden"
+}
+```
+
+## Implementation Notes
+
+- The `/reference/:reference` endpoint is public and ideal for customer-facing tracking pages
+- Rider role users automatically see only their assigned shipments when calling `GET /api/v1/shipping`
+- The history array in responses shows the complete tracking timeline in chronological order
+- Sensitive information (rider contact details, cost breakdowns) is only included in authenticated responses
+
+## Related Endpoints
+
+- [Create Shipment](/api/shipping/create-shipment) - Create a new shipment
+- [Update Shipment History](/api/shipping/rider-assignment) - Update delivery status
+- [Cost Management](/api/shipping/cost-management) - Manage shipment costs

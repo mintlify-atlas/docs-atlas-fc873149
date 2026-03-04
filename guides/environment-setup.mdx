@@ -1,0 +1,288 @@
+---
+title: Environment Setup
+description: Configure environment variables, database connections, and external services for the DPM Delivery API
+---
+
+## Overview
+
+The DPM Delivery API requires several environment variables to be configured before running. This guide covers all required environment variables and their purposes.
+
+## Environment Variables
+
+### Creating Your Environment File
+
+Copy the `.env.example` file to create your environment configuration:
+
+```bash
+cp .env.example .env
+```
+
+### Required Variables
+
+<Steps>
+  <Step title="Server Configuration">
+    Configure the basic server settings:
+
+    ```bash
+    PORT=8080
+    NODE_ENV="development"
+    ```
+
+    <Info>
+      The `NODE_ENV` variable accepts: `local`, `development`, `staging`, or `production`. This affects database synchronization and other environment-specific behaviors.
+    </Info>
+  </Step>
+
+  <Step title="Database Configuration">
+    Set up your PostgreSQL database credentials:
+
+    ```bash
+    TYPEORM_USERNAME="your_db_username"
+    TYPEORM_PASSWORD="your_db_password"
+    TYPEORM_HOST="localhost"
+    TYPEORM_DATABASE="dpm_delivery"
+    TYPEORM_PORT=5432
+    ```
+
+    <Warning>
+      These credentials are used by the `DatabaseConnectionService` to establish database connections. Ensure your PostgreSQL instance is running before starting the application.
+    </Warning>
+  </Step>
+
+  <Step title="JWT Authentication">
+    Generate a secure secret for JWT token signing:
+
+    ```bash
+    JWT_SECRET="your-super-secret-jwt-key"
+    ```
+
+    <Info>
+      The JWT tokens expire after 365 days by default. This is configured in `src/app.module.ts:46`.
+    </Info>
+  </Step>
+
+  <Step title="Cloudinary Configuration">
+    Configure Cloudinary for file and image uploads:
+
+    ```bash
+    CLOUDINARY_CLOUD_NAME="your_cloud_name"
+    CLOUDINARY_API_KEY="your_api_key"
+    CLOUDINARY_VERSION="v1"
+    CLOUDINARY_SECRET="your_api_secret"
+    ```
+
+    Used by `CloudinaryProvider` in `src/files/cloudinary.provider.ts` for image and document uploads.
+  </Step>
+
+  <Step title="SMS Service (Arkesel)">
+    Configure Arkesel for SMS notifications:
+
+    ```bash
+    ARKESEL_KEY="your_arkesel_api_key"
+    ARKESEL_ENDPOINT_V2="https://sms.arkesel.com/api/v2"
+    ```
+
+    <Info>
+      The SMS service sends notifications with sender ID "DPMDelivery". See `src/sms/sms.service.ts:20`.
+    </Info>
+  </Step>
+
+  <Step title="Payment Gateway (Kowri)">
+    Configure Kowri mobile money payment integration:
+
+    ```bash
+    KOWRI_EP="https://api.kowripay.com"
+    KOWRI_APP_ID="your_app_id"
+    KOWRI_APP_REFERENCE="your_app_reference"
+    KOWRI_APP_SECRET="your_app_secret"
+    KOWRI_ENV="Test"
+    ```
+
+    Used for mobile money payments (MTN, AirtelTigo, Telecel) in Ghana.
+  </Step>
+
+  <Step title="Paystack Integration">
+    Configure Paystack for account verification:
+
+    ```bash
+    PAYSTACK_SECRET="your_paystack_secret_key"
+    PAYSTACK_BASE_URL="https://api.paystack.co"
+    ```
+
+    <Info>
+      Paystack is used to verify mobile money account numbers before processing payments. See `src/payment/payment.service.ts:89-96`.
+    </Info>
+  </Step>
+
+  <Step title="Application URLs">
+    Configure frontend and dashboard URLs:
+
+    ```bash
+    FRONTEND_URL="https://your-frontend.com"
+    DASHBOARD_URL="https://your-dashboard.com"
+    ```
+
+    These are required environment variables validated in `src/app.environment.ts:15-16`.
+  </Step>
+
+  <Step title="Admin Configuration">
+    Set admin contact and default credentials:
+
+    ```bash
+    ADMIN_PHONE_NUMBER="+233200000000"
+    RIDER_DEFAULT_PASSWORD="secure_default_password"
+    ```
+
+    <Warning>
+      The `RIDER_DEFAULT_PASSWORD` is used when creating new rider accounts. Change this to a secure value in production.
+    </Warning>
+  </Step>
+</Steps>
+
+## Environment Validation
+
+The application uses the `env-var` package to validate required environment variables at startup. Missing or invalid variables will cause the application to fail during bootstrap.
+
+### Validation Example
+
+From `src/app.environment.ts`, the application validates:
+
+```typescript
+export const ENV = {
+  NODE_ENV: get('NODE_ENV')
+    .required()
+    .asEnum<Environment>(Object.values(Environment)),
+  FRONTEND_URL: get('FRONTEND_URL').required().asString(),
+  DASHBOARD_URL: get('DASHBOARD_URL').required().asString(),
+  ADMIN_PHONE_NUMBER: get('ADMIN_PHONE_NUMBER').required().asString(),
+  RIDER_DEFAULT_PASSWORD: get('RIDER_DEFAULT_PASSWORD').required().asString(),
+  PAYSTACK_BASE_URL: get('PAYSTACK_BASE_URL').required().asString(),
+  KOWRI_EP: get('KOWRI_EP').required().asString(),
+  PAYSTACK_SECRET: get('PAYSTACK_SECRET').required().asString(),
+};
+```
+
+## Complete .env Template
+
+<CodeGroup>
+
+```bash Development
+# Server Configuration
+PORT=8080
+NODE_ENV="development"
+
+# Database Configuration
+TYPEORM_USERNAME="postgres"
+TYPEORM_PASSWORD="password"
+TYPEORM_HOST="localhost"
+TYPEORM_DATABASE="dpm_delivery_dev"
+TYPEORM_PORT=5432
+
+# JWT Configuration
+JWT_SECRET="dev-secret-key-change-in-production"
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME="your_cloud_name"
+CLOUDINARY_API_KEY="your_api_key"
+CLOUDINARY_VERSION="v1"
+CLOUDINARY_SECRET="your_api_secret"
+
+# SMS Service (Arkesel)
+ARKESEL_KEY="your_arkesel_key"
+ARKESEL_ENDPOINT_V2="https://sms.arkesel.com/api/v2"
+
+# Payment Gateway (Kowri)
+KOWRI_EP="https://api.kowripay.com"
+KOWRI_APP_ID="your_app_id"
+KOWRI_APP_REFERENCE="your_reference"
+KOWRI_APP_SECRET="your_secret"
+KOWRI_ENV="Test"
+
+# Paystack Configuration
+PAYSTACK_SECRET="sk_test_xxxxx"
+PAYSTACK_BASE_URL="https://api.paystack.co"
+
+# Application URLs
+FRONTEND_URL="http://localhost:3000"
+DASHBOARD_URL="http://localhost:3001"
+
+# Admin Configuration
+ADMIN_PHONE_NUMBER="+233200000000"
+RIDER_DEFAULT_PASSWORD="DefaultRider123!"
+```
+
+```bash Production
+# Server Configuration
+PORT=8080
+NODE_ENV="production"
+
+# Database Configuration (Use secure credentials)
+TYPEORM_USERNAME="prod_user"
+TYPEORM_PASSWORD="<use-secrets-manager>"
+TYPEORM_HOST="your-db-host.amazonaws.com"
+TYPEORM_DATABASE="dpm_delivery_prod"
+TYPEORM_PORT=5432
+
+# JWT Configuration (Use strong secret)
+JWT_SECRET="<use-secrets-manager>"
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME="prod_cloud"
+CLOUDINARY_API_KEY="<production-key>"
+CLOUDINARY_VERSION="v1"
+CLOUDINARY_SECRET="<use-secrets-manager>"
+
+# SMS Service (Arkesel)
+ARKESEL_KEY="<production-key>"
+ARKESEL_ENDPOINT_V2="https://sms.arkesel.com/api/v2"
+
+# Payment Gateway (Kowri)
+KOWRI_EP="https://api.kowripay.com"
+KOWRI_APP_ID="<production-id>"
+KOWRI_APP_REFERENCE="<production-ref>"
+KOWRI_APP_SECRET="<use-secrets-manager>"
+KOWRI_ENV="Production"
+
+# Paystack Configuration (Use live keys)
+PAYSTACK_SECRET="sk_live_xxxxx"
+PAYSTACK_BASE_URL="https://api.paystack.co"
+
+# Application URLs
+FRONTEND_URL="https://app.dpmdelivery.com"
+DASHBOARD_URL="https://dashboard.dpmdelivery.com"
+
+# Admin Configuration
+ADMIN_PHONE_NUMBER="+233XXXXXXXXX"
+RIDER_DEFAULT_PASSWORD="<use-secrets-manager>"
+```
+
+</CodeGroup>
+
+## Verification
+
+After setting up your environment variables, verify the configuration:
+
+```bash
+npm run start:dev
+```
+
+If all environment variables are correctly configured, you should see:
+
+```
+[Nest] Application successfully started
+```
+
+<Warning>
+  Never commit your `.env` file to version control. The `.env.example` file should contain placeholder values only.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Configuration" icon="database" href="/guides/database-configuration">
+    Set up TypeORM, run migrations, and configure entities
+  </Card>
+  <Card title="Integration Guide" icon="plug" href="/guides/integration-guide">
+    Configure Paystack, SMS, and Cloudinary services
+  </Card>
+</CardGroup>

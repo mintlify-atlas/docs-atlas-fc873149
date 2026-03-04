@@ -1,0 +1,668 @@
+---
+title: 'Place Management'
+description: 'Create, update, and manage vendor locations with the Places API'
+---
+
+## Create Place
+
+Create a new place (vendor location) with a dedicated place admin.
+
+```http
+POST /places
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Place name
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Contact email
+</ParamField>
+
+<ParamField body="phone" type="string" required>
+  Phone number (Ghana format: +233...)
+</ParamField>
+
+<ParamField body="address" type="string" required>
+  Physical address
+</ParamField>
+
+<ParamField body="longitude" type="string" required>
+  Geographic longitude coordinate
+</ParamField>
+
+<ParamField body="latitude" type="string" required>
+  Geographic latitude coordinate
+</ParamField>
+
+<ParamField body="website" type="string">
+  Business website URL
+</ParamField>
+
+<ParamField body="category" type="string" required>
+  Category ID (UUID)
+</ParamField>
+
+<ParamField body="averagePrice" type="number" required>
+  Average item price
+</ParamField>
+
+<ParamField body="deliveryFee" type="number">
+  Delivery fee in local currency
+</ParamField>
+
+<ParamField body="minPrepTime" type="number">
+  Minimum preparation time (minutes)
+</ParamField>
+
+<ParamField body="maxPrepTime" type="number">
+  Maximum preparation time (minutes)
+</ParamField>
+
+<ParamField body="logo" type="file" required>
+  Logo image file (multipart/form-data)
+</ParamField>
+
+<ParamField body="mainImage" type="file" required>
+  Cover/hero image file (multipart/form-data)
+</ParamField>
+
+<ParamField body="placeAdminFullName" type="string" required>
+  Full name of the place administrator
+</ParamField>
+
+<ParamField body="placeAdminPhone" type="string" required>
+  Phone number of the place administrator
+</ParamField>
+
+<ParamField body="placeAdminPassword" type="string" required>
+  Password for the place administrator account
+</ParamField>
+
+### Response
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "Golden Spoon Restaurant",
+  "slug": "golden-spoon-restaurant",
+  "email": "contact@goldenspoon.com",
+  "phone": "+233244123456",
+  "address": "123 Main St, Accra",
+  "longitude": "-0.1870",
+  "latitude": "5.6037",
+  "website": "https://goldenspoon.com",
+  "logo": "https://storage.example.com/logos/golden-spoon.png",
+  "mainImage": "https://storage.example.com/images/golden-spoon-cover.jpg",
+  "isVerified": false,
+  "category": {
+    "id": "cat-123",
+    "name": "Restaurants",
+    "slug": "restaurants"
+  },
+  "averagePrice": 50,
+  "deliveryFee": 10,
+  "minPrepTime": 15,
+  "maxPrepTime": 30,
+  "rating": 0,
+  "total_reviews": 0,
+  "visits": 0,
+  "createdAt": "2024-03-04T10:00:00Z",
+  "updatedAt": "2024-03-04T10:00:00Z"
+}
+```
+
+---
+
+## Update Place
+
+Update place details. Super admins can update any place, place admins can only update their own.
+
+```http
+PUT /places/:id
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` or `PLACE_ADMIN` roles
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+### Request Body
+
+All fields are optional:
+
+<ParamField body="name" type="string">
+  Place name
+</ParamField>
+
+<ParamField body="email" type="string">
+  Contact email
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Phone number (Ghana format)
+</ParamField>
+
+<ParamField body="address" type="string">
+  Physical address
+</ParamField>
+
+<ParamField body="longitude" type="string">
+  Geographic longitude
+</ParamField>
+
+<ParamField body="latitude" type="string">
+  Geographic latitude
+</ParamField>
+
+<ParamField body="website" type="string">
+  Business website URL
+</ParamField>
+
+<ParamField body="category" type="string">
+  Category ID (UUID)
+</ParamField>
+
+<ParamField body="averagePrice" type="number">
+  Average item price
+</ParamField>
+
+<ParamField body="deliveryFee" type="number">
+  Delivery fee
+</ParamField>
+
+<ParamField body="minPrepTime" type="number">
+  Minimum preparation time (minutes)
+</ParamField>
+
+<ParamField body="maxPrepTime" type="number">
+  Maximum preparation time (minutes)
+</ParamField>
+
+<ParamField body="logo" type="file">
+  New logo image (multipart/form-data)
+</ParamField>
+
+<ParamField body="mainImage" type="file">
+  New cover image (multipart/form-data)
+</ParamField>
+
+### Response
+
+Returns the updated place object.
+
+---
+
+## Get All Places
+
+Retrieve paginated list of all places (admin only).
+
+```http
+GET /places
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+### Query Parameters
+
+<ParamField query="page" type="string">
+  Page number (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="string">
+  Items per page (default: 10)
+</ParamField>
+
+<ParamField query="category" type="string">
+  Filter by category ID
+</ParamField>
+
+<ParamField query="query" type="string">
+  Search query string
+</ParamField>
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "name": "Golden Spoon Restaurant",
+      "slug": "golden-spoon-restaurant",
+      // ... full place object
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 45,
+    "totalPages": 5
+  }
+}
+```
+
+---
+
+## Search Places
+
+Search for places by name with optional location-based filtering.
+
+```http
+GET /places/search
+```
+
+**Authentication**: Not required
+
+### Query Parameters
+
+<ParamField query="query" type="string" required>
+  Search query string
+</ParamField>
+
+<ParamField query="category" type="string">
+  Filter by category ID
+</ParamField>
+
+<ParamField query="longitude" type="string">
+  User's longitude for distance sorting
+</ParamField>
+
+<ParamField query="latitude" type="string">
+  User's latitude for distance sorting
+</ParamField>
+
+### Example
+
+```http
+GET /places/search?query=restaurant&latitude=5.6037&longitude=-0.1870
+```
+
+---
+
+## Get Places Nearby
+
+Find places near a specific location.
+
+```http
+GET /places/near/me
+```
+
+**Authentication**: Not required
+
+### Query Parameters
+
+<ParamField query="longitude" type="string" required>
+  Longitude coordinate
+</ParamField>
+
+<ParamField query="latitude" type="string" required>
+  Latitude coordinate
+</ParamField>
+
+### Example
+
+```http
+GET /places/near/me?latitude=5.6037&longitude=-0.1870
+```
+
+---
+
+## Get Place by ID
+
+Retrieve a single place by its UUID.
+
+```http
+GET /places/:id
+```
+
+**Authentication**: Not required
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+---
+
+## Get Place by Slug
+
+Retrieve a place by its URL-friendly slug.
+
+```http
+GET /places/:slug/slug
+```
+
+**Authentication**: Not required
+
+### Path Parameters
+
+<ParamField path="slug" type="string" required>
+  Place slug (e.g., "golden-spoon-restaurant")
+</ParamField>
+
+### Example
+
+```http
+GET /places/golden-spoon-restaurant/slug
+```
+
+---
+
+## Get Place Products
+
+Retrieve all products belonging to a place.
+
+```http
+GET /places/:id/products
+```
+
+**Authentication**: Not required
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+---
+
+## Get New Places
+
+Retrieve recently added places, optionally sorted by distance.
+
+```http
+GET /places/new
+```
+
+**Authentication**: Not required
+
+### Query Parameters
+
+<ParamField query="longitude" type="string">
+  User's longitude
+</ParamField>
+
+<ParamField query="latitude" type="string">
+  User's latitude
+</ParamField>
+
+---
+
+## Get Popular Places
+
+Retrieve popular places based on visit count.
+
+```http
+GET /places/popular/locations
+```
+
+**Authentication**: Not required
+
+### Query Parameters
+
+<ParamField query="longitude" type="string">
+  User's longitude
+</ParamField>
+
+<ParamField query="latitude" type="string">
+  User's latitude
+</ParamField>
+
+---
+
+## Delete Place
+
+Permanently delete a place and all associated data.
+
+```http
+DELETE /places/:id
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+<Warning>
+Deleting a place will cascade delete:
+- Product categories
+- Products
+- Offers
+- Bookings
+</Warning>
+
+---
+
+## Like Place
+
+Add a place to user's favorites.
+
+```http
+PUT /places/:placeId/like
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `USER` role
+
+### Path Parameters
+
+<ParamField path="placeId" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+---
+
+## Unlike Place
+
+Remove a place from user's favorites.
+
+```http
+PUT /places/:placeId/dislike
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `USER` role
+
+### Path Parameters
+
+<ParamField path="placeId" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+---
+
+## Rate Place
+
+Submit a rating and review for a place.
+
+```http
+POST /places/:id/rate
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `USER` role
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+### Request Body
+
+<ParamField body="rating" type="number" required>
+  Rating value (1-5)
+</ParamField>
+
+<ParamField body="comment" type="string">
+  Review text
+</ParamField>
+
+---
+
+## Get Place Ratings
+
+Retrieve paginated ratings/reviews for a place.
+
+```http
+GET /places/:id/ratings
+```
+
+**Authentication**: Not required
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="number">
+  Page number (default: 1)
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Items per page (default: 10)
+</ParamField>
+
+---
+
+## Update Opening Hours
+
+Set or update the weekly schedule for a place.
+
+```http
+POST /places/:id/openingHours
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` or `PLACE_ADMIN` roles
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Place ID (UUID)
+</ParamField>
+
+### Request Body
+
+Each day can have one of three states:
+
+1. **Closed**: `{ "closed": true }`
+2. **Open All Day**: `{ "openAllDay": true }`
+3. **Time Ranges**: `{ "ranges": [{ "from": "09:00", "to": "17:00" }] }`
+
+<ParamField body="monday" type="object" required>
+  Monday opening hours
+</ParamField>
+
+<ParamField body="tuesday" type="object" required>
+  Tuesday opening hours
+</ParamField>
+
+<ParamField body="wednesday" type="object" required>
+  Wednesday opening hours
+</ParamField>
+
+<ParamField body="thursday" type="object" required>
+  Thursday opening hours
+</ParamField>
+
+<ParamField body="friday" type="object" required>
+  Friday opening hours
+</ParamField>
+
+<ParamField body="saturday" type="object" required>
+  Saturday opening hours
+</ParamField>
+
+<ParamField body="sunday" type="object" required>
+  Sunday opening hours
+</ParamField>
+
+<ParamField body="exceptions" type="array">
+  Special hours for holidays/events
+</ParamField>
+
+### Example Request
+
+```json
+{
+  "monday": {
+    "ranges": [
+      { "from": "09:00", "to": "17:00" },
+      { "from": "18:00", "to": "22:00" }
+    ]
+  },
+  "tuesday": {
+    "ranges": [
+      { "from": "09:00", "to": "22:00" }
+    ]
+  },
+  "wednesday": { "openAllDay": true },
+  "thursday": { "ranges": [{ "from": "09:00", "to": "22:00" }] },
+  "friday": { "ranges": [{ "from": "09:00", "to": "23:00" }] },
+  "saturday": { "openAllDay": true },
+  "sunday": { "closed": true },
+  "exceptions": [
+    {
+      "name": "Christmas Day",
+      "date": "2024-12-25",
+      "repeating": true
+    }
+  ]
+}
+```
+
+<Note>
+Time formats must use 24-hour military time (HH:MM). For example: "09:00", "14:30", "23:59".
+</Note>
+
+---
+
+## Get Total Places Count
+
+Get the total number of places in the system.
+
+```http
+GET /places/all/count
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+---
+
+## Get Place Admin
+
+Retrieve the administrator account for a specific place.
+
+```http
+GET /places/admin/:id
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` role only
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Place ID (UUID)
+</ParamField>

@@ -1,0 +1,427 @@
+---
+title: Database Configuration
+description: Configure TypeORM, run migrations, and manage database entities for the DPM Delivery API
+---
+
+## Overview
+
+The DPM Delivery API uses TypeORM with PostgreSQL for database management. This guide covers database setup, configuration, migrations, and entity management.
+
+## Database Setup
+
+### Prerequisites
+
+<Steps>
+  <Step title="Install PostgreSQL">
+    Install PostgreSQL 12 or higher:
+
+    ```bash
+    # Ubuntu/Debian
+    sudo apt-get install postgresql postgresql-contrib
+
+    # macOS
+    brew install postgresql
+
+    # Start PostgreSQL service
+    sudo service postgresql start
+    ```
+  </Step>
+
+  <Step title="Create Database">
+    Create a new database for the application:
+
+    ```sql
+    CREATE DATABASE dpm_delivery;
+    CREATE USER dpm_user WITH ENCRYPTED PASSWORD 'your_password';
+    GRANT ALL PRIVILEGES ON DATABASE dpm_delivery TO dpm_user;
+    ```
+  </Step>
+
+  <Step title="Configure Environment">
+    Update your `.env` file with database credentials:
+
+    ```bash
+    TYPEORM_USERNAME="dpm_user"
+    TYPEORM_PASSWORD="your_password"
+    TYPEORM_HOST="localhost"
+    TYPEORM_DATABASE="dpm_delivery"
+    TYPEORM_PORT=5432
+    ```
+  </Step>
+</Steps>
+
+## TypeORM Configuration
+
+### Database Connection Service
+
+The application uses a custom `DatabaseConnectionService` to configure TypeORM. Here's the implementation from `src/db/data-source.service.ts`:
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { TypeOrmModuleOptions, TypeOrmOptionsFactory } from '@nestjs/typeorm';
+
+@Injectable()
+export class DatabaseConnectionService implements TypeOrmOptionsFactory {
+  constructor(private configService: ConfigService) {}
+  
+  createTypeOrmOptions(): TypeOrmModuleOptions {
+    const NODE_ENV = this.configService.get<string>('NODE_ENV');
+    return {
+      name: 'default',
+      type: 'postgres',
+      host: this.configService.get<string>('TYPEORM_HOST'),
+      port: Number(this.configService.get<string>('TYPEORM_PORT')),
+      username: this.configService.get<string>('TYPEORM_USERNAME'),
+      password: this.configService.get<string>('TYPEORM_PASSWORD'),
+      database: this.configService.get<string>('TYPEORM_DATABASE'),
+
+      synchronize: NODE_ENV !== 'production',
+      dropSchema: false,
+      logging: ['error', 'warn'],
+      autoLoadEntities: true,
+      entities: [
+        `${NODE_ENV === 'test' ? 'src' : 'dist'}/**/**.entity{.ts,.js}`,
+      ],
+    };
+  }
+}
+```
+
+### Configuration Details
+
+<Accordion title="Connection Options Explained">
+  - **synchronize**: Automatically syncs database schema in development. **Disabled in production** for safety.
+  - **dropSchema**: Never drops the schema to prevent data loss.
+  - **logging**: Logs only errors and warnings to reduce noise.
+  - **autoLoadEntities**: Automatically loads all entity classes.
+  - **entities**: Dynamically loads entities from `*.entity.ts` or `*.entity.js` files.
+</Accordion>
+
+<Warning>
+  The `synchronize` option is automatically disabled in production (`NODE_ENV === 'production'`). Always use migrations in production environments.
+</Warning>
+
+### Module Integration
+
+The database is configured in `src/app.module.ts`:
+
+```typescript
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DatabaseConnectionService } from './db/data-source.service';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRootAsync({
+      useClass: DatabaseConnectionService,
+    }),
+    // ... other modules
+  ],
+})
+export class AppModule {}
+```
+
+## Database Migrations
+
+### Migration Scripts
+
+The application provides npm scripts for managing migrations (from `package.json`):
+
+<CodeGroup>
+
+```json package.json Scripts
+{
+  "scripts": {
+    "typeorm": "npm run build && npx typeorm -d dist/db/data-source.js",
+    "migration:generate": "npm run typeorm -- migration:generate",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert"
+  }
+}
+```
+
+</CodeGroup>
+
+### Running Migrations
+
+<Steps>
+  <Step title="Generate Migration">
+    Create a new migration based on entity changes:
+
+    ```bash
+    npm run migration:generate -- src/db/migrations/InitialSchema
+    ```
+
+    This compares your entities with the current database schema and generates a migration file.
+  </Step>
+
+  <Step title="Run Migrations">
+    Apply pending migrations to the database:
+
+    ```bash
+    npm run migration:run
+    ```
+
+    <Info>
+      This builds the project first (`npm run build`) before running migrations from the `dist` directory.
+    </Info>
+  </Step>
+
+  <Step title="Revert Migration">
+    Rollback the last executed migration:
+
+    ```bash
+    npm run migration:revert
+    ```
+
+    <Warning>
+      This reverts only the most recent migration. Run multiple times to revert multiple migrations.
+    </Warning>
+  </Step>
+</Steps>
+
+## Entity Structure
+
+### Base Entity
+
+All entities extend the `AbstractEntity` class from `src/entities/abstract.entity.ts`:
+
+```typescript
+import {
+  BaseEntity,
+  BeforeInsert,
+  BeforeUpdate,
+  CreateDateColumn,
+  DeleteDateColumn,
+  Index,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+export class AbstractEntity extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  @Index()
+  id: string;
+
+  @CreateDateColumn({
+    name: 'createdAt',
+    type: 'timestamp',
+  })
+  createdAt: Date;
+
+  @UpdateDateColumn({
+    name: 'updatedAt',
+    type: 'timestamp',
+  })
+  updatedAt: Date;
+
+  @DeleteDateColumn({
+    name: 'deletedAt',
+    type: 'timestamp',
+  })
+  deletedAt: Date;
+
+  @BeforeInsert()
+  beforeInsert() {
+    this.createdAt = new Date();
+    this.updatedAt = this.createdAt;
+  }
+
+  @BeforeUpdate()
+  beforeUpdate() {
+    this.updatedAt = new Date();
+  }
+}
+```
+
+### Features Provided
+
+<CardGroup cols={2}>
+  <Card title="UUID Primary Keys" icon="key">
+    All entities use UUID v4 for primary keys with automatic indexing
+  </Card>
+  <Card title="Timestamps" icon="clock">
+    Automatic creation and update timestamps on all records
+  </Card>
+  <Card title="Soft Deletes" icon="trash">
+    Records are soft-deleted using the deletedAt timestamp
+  </Card>
+  <Card title="Lifecycle Hooks" icon="arrow-rotate-right">
+    BeforeInsert and BeforeUpdate hooks for timestamp management
+  </Card>
+</CardGroup>
+
+### Example Entity
+
+Here's the `Booking` entity from `src/bookings/entities/booking.entity.ts`:
+
+```typescript
+import { AbstractEntity } from 'src/entities/abstract.entity';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { BookingStatus } from './booking-status.entity';
+import { User } from 'src/users/entities/user.entity';
+import { Place } from 'src/places/entities/place.entity';
+import { OrderedProducts } from 'src/products/entities/ordered-product.entity';
+
+@Entity('bookings')
+export class Booking extends AbstractEntity {
+  @Column()
+  total_amount: number;
+  
+  @Column({ default: 1 })
+  quantity: number;
+  
+  @Column({ default: 0 })
+  price: number;
+
+  @Column({ default: 0 })
+  rider_tip: number;
+  
+  @Column({ default: 0 })
+  delivery_fee: number;
+
+  @Column()
+  recipient_address: string;
+
+  @Column({ default: false })
+  paid: boolean;
+
+  @Column()
+  recipient_phone: string;
+
+  @Column()
+  transaction_id: string;
+  
+  @Column({ default: null })
+  request_id: string;
+
+  @Column()
+  reference_code: string;
+  
+  @Column({ nullable: true })
+  receipt_url: string;
+
+  @ManyToOne(() => BookingStatus, (status) => status.bookings, { eager: true })
+  status: BookingStatus;
+
+  @ManyToOne(() => User, (user) => user.bookings, { eager: true })
+  user: User;
+
+  @ManyToOne(() => Place, (place) => place.bookings, { eager: true })
+  place: Place;
+
+  @OneToMany(
+    () => OrderedProducts,
+    (orderedProduct) => orderedProduct.booking,
+    { eager: true, onDelete: 'CASCADE' }
+  )
+  services: OrderedProducts[];
+}
+```
+
+## Database Best Practices
+
+<Accordion title="Use Transactions for Critical Operations">
+  ```typescript
+  import { DataSource } from 'typeorm';
+
+  async createBookingWithPayment(data: any) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const booking = await queryRunner.manager.save(Booking, data);
+      const payment = await queryRunner.manager.save(Payment, {
+        booking: booking,
+        amount: data.total_amount
+      });
+
+      await queryRunner.commitTransaction();
+      return booking;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Use Eager Loading Wisely">
+  Eager loading (automatically loading relations) is convenient but can impact performance:
+
+  ```typescript
+  // Eager loading (set in entity)
+  @ManyToOne(() => User, (user) => user.bookings, { eager: true })
+  user: User;
+
+  // Better: Use query builder for specific cases
+  const bookings = await this.bookingRepository
+    .createQueryBuilder('booking')
+    .leftJoinAndSelect('booking.user', 'user')
+    .leftJoinAndSelect('booking.place', 'place')
+    .where('booking.userId = :userId', { userId })
+    .getMany();
+  ```
+</Accordion>
+
+<Accordion title="Index Frequently Queried Columns">
+  ```typescript
+  @Entity('bookings')
+  @Index(['user', 'createdAt']) // Composite index
+  export class Booking extends AbstractEntity {
+    @Column()
+    @Index() // Single column index
+    reference_code: string;
+
+    @Column()
+    @Index() // Index for foreign key lookups
+    transaction_id: string;
+  }
+  ```
+</Accordion>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Connection Refused Error">
+    **Error**: `Error: connect ECONNREFUSED 127.0.0.1:5432`
+
+    **Solutions**:
+    - Verify PostgreSQL is running: `sudo service postgresql status`
+    - Check `TYPEORM_HOST` and `TYPEORM_PORT` in `.env`
+    - Ensure PostgreSQL accepts connections from your host
+  </Accordion>
+
+  <Accordion title="Authentication Failed">
+    **Error**: `error: password authentication failed for user "dpm_user"`
+
+    **Solutions**:
+    - Verify credentials in `.env` match database user
+    - Check PostgreSQL `pg_hba.conf` authentication method
+    - Reset user password: `ALTER USER dpm_user WITH PASSWORD 'new_password';`
+  </Accordion>
+
+  <Accordion title="Synchronize Not Working">
+    **Issue**: Schema changes not reflected in database
+
+    **Solutions**:
+    - Ensure `NODE_ENV` is not set to `production`
+    - Check entity files are properly named `*.entity.ts`
+    - Clear `dist` folder and rebuild: `rm -rf dist && npm run build`
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Integration Guide" icon="plug" href="/guides/integration-guide">
+    Set up payment gateways, SMS, and file upload services
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/guides/error-handling">
+    Learn about validation and exception handling
+  </Card>
+</CardGroup>

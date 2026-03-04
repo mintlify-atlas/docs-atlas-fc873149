@@ -1,0 +1,223 @@
+---
+title: 'Riders API Overview'
+description: 'Manage delivery riders/couriers including registration, assignments, and performance tracking'
+---
+
+## Introduction
+
+The Riders API (also called Couriers) manages delivery personnel in the DPM Delivery system. Riders are specialized users with the `COURIER` role (displayed as "Rider" in the system) who handle package pickups and deliveries.
+
+## Base URL
+
+```
+/rider
+```
+
+## Rider vs User Role
+
+<CardGroup cols={2}>
+  <Card title="USER Role" icon="user">
+    Regular customers who create delivery requests and track their shipments. They can manage bookings and payments.
+  </Card>
+  <Card title="COURIER Role" icon="motorcycle">
+    Delivery personnel (Riders) who are assigned to shipments, perform deliveries, and track their earnings. Displayed as "Rider" in the system.
+  </Card>
+</CardGroup>
+
+### Key Differences
+
+| Feature | USER | COURIER (Rider) |
+|---------|------|----------------|
+| Create bookings | ✓ | ✗ |
+| Receive delivery assignments | ✗ | ✓ |
+| Vehicle & document info | ✗ | ✓ |
+| Delivery statistics | ✗ | ✓ |
+| Default password on creation | ✗ | ✓ |
+| Access to wallet | ✓ | ✓ |
+
+## Rider Entity Structure
+
+Riders have both a base User account and additional Rider-specific information:
+
+### User Fields
+
+<ResponseField name="id" type="string (UUID)">
+  Unique identifier for the rider's user account
+</ResponseField>
+
+<ResponseField name="phone" type="string" required>
+  Rider's phone number
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  Rider's email address (required for riders, unlike regular users)
+</ResponseField>
+
+<ResponseField name="fullName" type="string" required>
+  Rider's full name
+</ResponseField>
+
+<ResponseField name="role" type="Role">
+  Role object with name "Rider" (COURIER enum value)
+</ResponseField>
+
+<ResponseField name="isDefaultPassword" type="boolean" default="true">
+  Indicates if rider is using the default password assigned at creation
+</ResponseField>
+
+<ResponseField name="profilePicture" type="string">
+  URL to rider's profile photo
+</ResponseField>
+
+<ResponseField name="wallet" type="Wallet">
+  Rider's wallet for tracking earnings and payouts
+</ResponseField>
+
+### Rider-Specific Fields
+
+<ResponseField name="rider.id" type="string (UUID)">
+  Unique identifier for the rider entity
+</ResponseField>
+
+<ResponseField name="rider.bikeRegistrationNumber" type="string" required>
+  Vehicle registration number
+</ResponseField>
+
+<ResponseField name="rider.bikeType" type="string" required>
+  Type of delivery vehicle (e.g., Bike, Aboboyaa, Van)
+</ResponseField>
+
+<ResponseField name="rider.bikeColor" type="string" required>
+  Vehicle color
+</ResponseField>
+
+<ResponseField name="rider.bikeBrand" type="string" required>
+  Vehicle manufacturer/brand
+</ResponseField>
+
+<ResponseField name="rider.bikeModel" type="string" required>
+  Vehicle model
+</ResponseField>
+
+<ResponseField name="rider.bikeYear" type="number" required>
+  Vehicle manufacturing year
+</ResponseField>
+
+<ResponseField name="rider.bikeImage" type="string" required>
+  URL to vehicle photo
+</ResponseField>
+
+<ResponseField name="rider.identificationDocumentNumber" type="string" required>
+  ID document number (e.g., driver's license, national ID)
+</ResponseField>
+
+<ResponseField name="rider.identificationDocumentType" type="string" required>
+  Type of identification document
+</ResponseField>
+
+<ResponseField name="rider.identificationDocumentImage" type="string" required>
+  URL to ID document photo
+</ResponseField>
+
+<ResponseField name="rider.documentExpiryDate" type="string (ISO 8601)" required>
+  Expiration date of the identification document
+</ResponseField>
+
+<ResponseField name="rider.riderId" type="string" required>
+  Reference ID linking the rider entity to the user account (indexed)
+</ResponseField>
+
+## Default Password Feature
+
+<Note>
+  When admins create new rider accounts, the system automatically generates a default password. The rider receives this password and should change it on first login. The `isDefaultPassword` flag tracks whether the rider is still using this default password.
+</Note>
+
+## Authentication
+
+All endpoints require Bearer token authentication:
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Rider Creation Workflow
+
+1. **Admin creates rider** - Submits rider information with required documents
+2. **System creates user account** - User created with COURIER role
+3. **Default password generated** - System generates and returns default password
+4. **Rider receives credentials** - Admin communicates login credentials to rider
+5. **Rider logs in** - Uses phone/email and default password
+6. **Password change** - Rider changes password on first login
+
+## Key Features
+
+### Rider Management
+- Create new rider accounts with vehicle and ID verification
+- Update rider information and documents
+- List all riders with pagination
+- View individual rider details
+
+### Performance Tracking
+- Get rider delivery statistics
+- Track earnings and completed deliveries
+- Monitor active assignments
+
+### Document Management
+- Upload and update ID documents
+- Upload and update vehicle photos
+- Track document expiry dates
+
+### Wallet & Earnings
+- Track delivery earnings
+- Request payouts
+- View transaction history
+
+## Vehicle Types
+
+The system supports multiple delivery vehicle types:
+
+<CardGroup cols={3}>
+  <Card title="Bike" icon="motorcycle">
+    Standard motorcycle delivery
+  </Card>
+  <Card title="Aboboyaa" icon="bicycle">
+    Motorized tricycle for larger loads
+  </Card>
+  <Card title="Van" icon="van-shuttle">
+    Van for bulk deliveries
+  </Card>
+</CardGroup>
+
+## Common Query Parameters
+
+List endpoints support pagination:
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Number of items per page
+</ParamField>
+
+## Rider Statistics
+
+Riders can access performance metrics including:
+
+- Total deliveries completed
+- Total earnings
+- Current active assignments
+- Success rate
+- Average delivery time
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Rider Management" icon="motorcycle" href="/api/riders/management">
+    Learn about rider CRUD operations and document handling
+  </Card>
+  <Card title="Shipping Orders" icon="box" href="/api/shipping/overview">
+    See how riders are assigned to delivery orders
+  </Card>
+</CardGroup>

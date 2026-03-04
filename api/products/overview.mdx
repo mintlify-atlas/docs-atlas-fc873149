@@ -1,0 +1,172 @@
+---
+title: 'Products API Overview'
+description: 'Manage products, menu items, and services offered by places in the DPM Delivery platform'
+---
+
+## Introduction
+
+The Products API enables management of items offered by places (vendors). Products can represent food menu items, retail products, or services depending on the place category.
+
+## Product-Place Relationship
+
+Products are **place-specific** and organized through a hierarchical structure:
+
+```
+Place (Vendor)
+  └── Product Categories (e.g., "Main Dishes", "Beverages")
+        └── Products (e.g., "Jollof Rice", "Coca Cola")
+```
+
+### Multi-Tenant Product Management
+
+- Each place has its own product catalog
+- Product categories are **per-place** (not global)
+- Same product name can exist across different places
+- Products belong to a specific `ProductsCategory` which belongs to a `Place`
+
+## Base URL
+
+```
+POST   /products
+GET    /products/:id
+PUT    /products/:id
+DELETE /products/:id
+```
+
+## Product Structure
+
+<ResponseField name="id" type="string" required>
+  Unique identifier (UUID)
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Product name
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Product description (can include ingredients or service details)
+</ResponseField>
+
+<ResponseField name="photo" type="string">
+  Product image URL
+</ResponseField>
+
+<ResponseField name="price" type="number" required>
+  Product price (default: 0.0)
+</ResponseField>
+
+<ResponseField name="productCategory" type="object" required>
+  The product category this product belongs to
+  
+  Contains:
+  - `id`: Category UUID
+  - `name`: Category name
+  - `slug`: URL-friendly identifier
+  - `place`: Reference to the parent place
+</ResponseField>
+
+<ResponseField name="offers" type="array">
+  Active promotional offers for this product
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  Creation timestamp
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  Last update timestamp
+</ResponseField>
+
+## Product Categories (ProductsCategory)
+
+Products are organized into categories that are **specific to each place**:
+
+<ResponseField name="id" type="string" required>
+  Category ID (UUID)
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Category name (e.g., "Main Dishes", "Appetizers")
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly identifier (auto-generated)
+</ResponseField>
+
+<ResponseField name="place" type="object" required>
+  The place this category belongs to
+</ResponseField>
+
+<ResponseField name="products" type="array">
+  Products in this category
+</ResponseField>
+
+## Permissions
+
+- **ADMIN**: Full access to all products across all places
+- **PLACE_ADMIN**: Manage products for their own place only
+- **Public**: View product details
+
+<Note>
+Place admins can only create, update, and delete products that belong to their assigned place. The system validates ownership through the product's category relationship.
+</Note>
+
+## Product Lifecycle
+
+1. **Create Product Category** (via ProductsCategory API) - Belongs to a Place
+2. **Create Product** - Assigned to a Product Category
+3. **Update Product** - Modify details, pricing, or image
+4. **Delete Product** - Remove from catalog
+
+<Warning>
+Deleting a product category will cascade delete all products in that category.
+</Warning>
+
+## Use Cases
+
+### Restaurant Menu
+
+```json
+{
+  "place": "Golden Spoon Restaurant",
+  "categories": [
+    {
+      "name": "Main Dishes",
+      "products": [
+        { "name": "Jollof Rice", "price": 25.00 },
+        { "name": "Fufu with Light Soup", "price": 30.00 }
+      ]
+    },
+    {
+      "name": "Beverages",
+      "products": [
+        { "name": "Coca Cola", "price": 5.00 },
+        { "name": "Fresh Juice", "price": 10.00 }
+      ]
+    }
+  ]
+}
+```
+
+### Pharmacy Products
+
+```json
+{
+  "place": "HealthCare Pharmacy",
+  "categories": [
+    {
+      "name": "Over-the-Counter",
+      "products": [
+        { "name": "Paracetamol 500mg", "price": 2.50 },
+        { "name": "Vitamin C Tablets", "price": 15.00 }
+      ]
+    }
+  ]
+}
+```
+
+## Related Resources
+
+- [Product Management](/api/products/management) - CRUD operations
+- [Places API](/api/places/overview) - Vendor management
+- [Categories API](/api/categories/overview) - Business categories (not product categories)

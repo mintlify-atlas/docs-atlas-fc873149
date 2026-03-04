@@ -1,0 +1,156 @@
+---
+title: 'Places API Overview'
+description: 'Manage vendor locations, restaurants, and service providers in the DPM Delivery platform'
+---
+
+## Introduction
+
+The Places API allows you to manage vendor locations (restaurants, stores, service providers) in the DPM Delivery platform. Places represent the core business entities that offer products and services to customers.
+
+## Multi-Tenant Architecture
+
+Each place operates as a semi-independent tenant with:
+
+- **Place Admin**: Dedicated administrator with `PLACE_ADMIN` role
+- **Product Categories**: Custom menu/product organization per place
+- **Opening Hours**: Flexible schedule management
+- **Location Data**: Geospatial coordinates for proximity search
+- **Independent Products**: Each place manages its own product catalog
+
+## Base URL
+
+```
+POST   /places
+GET    /places
+GET    /places/:id
+PUT    /places/:id
+DELETE /places/:id
+```
+
+## Key Features
+
+### Geospatial Search
+
+Find places near users based on latitude/longitude coordinates:
+
+```http
+GET /places/near/me?latitude=5.6037&longitude=-0.1870
+```
+
+### Category Filtering
+
+Filter places by business category (restaurants, pharmacies, etc.):
+
+```http
+GET /places?category={categoryId}
+```
+
+### Place Discovery
+
+- **Search**: Full-text search with optional geolocation
+- **Popular Places**: Trending locations based on visits
+- **New Places**: Recently added vendors
+- **Nearby Places**: Distance-based recommendations
+
+## Place Structure
+
+<ResponseField name="id" type="string" required>
+  Unique identifier (UUID)
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Place name
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-friendly identifier (auto-generated)
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  Contact email
+</ResponseField>
+
+<ResponseField name="phone" type="string" required>
+  Phone number (Ghana format)
+</ResponseField>
+
+<ResponseField name="address" type="string" required>
+  Physical address
+</ResponseField>
+
+<ResponseField name="longitude" type="string" required>
+  Geographic longitude
+</ResponseField>
+
+<ResponseField name="latitude" type="string" required>
+  Geographic latitude
+</ResponseField>
+
+<ResponseField name="website" type="string">
+  Business website URL
+</ResponseField>
+
+<ResponseField name="logo" type="string" required>
+  Logo image URL
+</ResponseField>
+
+<ResponseField name="mainImage" type="string" required>
+  Cover/hero image URL
+</ResponseField>
+
+<ResponseField name="isVerified" type="boolean">
+  Verification status (default: false)
+</ResponseField>
+
+<ResponseField name="category" type="object" required>
+  Business category (restaurants, pharmacy, etc.)
+</ResponseField>
+
+<ResponseField name="averagePrice" type="number">
+  Average item price (default: 0)
+</ResponseField>
+
+<ResponseField name="deliveryFee" type="number">
+  Delivery fee in local currency (default: 0)
+</ResponseField>
+
+<ResponseField name="minPrepTime" type="number">
+  Minimum preparation time in minutes (default: 5)
+</ResponseField>
+
+<ResponseField name="maxPrepTime" type="number">
+  Maximum preparation time in minutes (default: 15)
+</ResponseField>
+
+<ResponseField name="rating" type="number">
+  Average rating (0-5, default: 0)
+</ResponseField>
+
+<ResponseField name="total_reviews" type="number">
+  Total number of reviews (default: 0)
+</ResponseField>
+
+<ResponseField name="visits" type="number">
+  Total visit count (default: 0)
+</ResponseField>
+
+<ResponseField name="openingHours" type="object">
+  Weekly schedule and exceptions
+</ResponseField>
+
+<ResponseField name="productCategory" type="array">
+  Custom product categories for this place
+</ResponseField>
+
+## Permissions
+
+- **ADMIN**: Full access to all place operations
+- **PLACE_ADMIN**: Manage own place, products, and opening hours
+- **USER**: View places, rate, like/unlike
+- **Public**: Search, view details, nearby places
+
+## Related Resources
+
+- [Place Management](/api/places/management) - CRUD operations
+- [Products API](/api/products/overview) - Product management
+- [Categories API](/api/categories/overview) - Business categories

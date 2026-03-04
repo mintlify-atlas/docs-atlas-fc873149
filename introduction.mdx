@@ -1,0 +1,305 @@
+---
+title: DPM Delivery API documentation
+description: Build powerful delivery and logistics applications with our comprehensive REST API
+mode: custom
+---
+
+<div className="relative overflow-hidden bg-gradient-to-br from-[#1e40af] via-[#2563eb] to-[#3b82f6] dark:from-[#0f1729] dark:via-[#1e293b] dark:to-[#0f172a] py-20">
+  <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
+          DPM Delivery API
+        </h1>
+        <p className="text-lg sm:text-xl text-blue-100 dark:text-gray-300 max-w-2xl mb-8">
+          A comprehensive delivery management platform API for handling bookings, shipments, rider assignments, and logistics operations. Built with NestJS and designed for scalability.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a
+            href="/quickstart"
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#2563eb] font-semibold hover:bg-gray-100 transition-colors"
+          >
+            Get started
+            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+          <a
+            href="/api/auth/signup"
+            className="inline-flex items-center px-6 py-3 rounded-lg border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+          >
+            API reference
+          </a>
+        </div>
+      </div>
+      <div className="hidden lg:block lg:col-span-5">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-[#2563eb] to-[#3b82f6] blur-3xl opacity-30"></div>
+          <div className="relative bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                <span className="text-white text-sm font-mono">POST /api/v1/bookings</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-blue-400"></div>
+                <span className="text-white text-sm font-mono">GET /api/v1/shipping/:id</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-purple-400"></div>
+                <span className="text-white text-sm font-mono">PATCH /api/v1/shipping/:id/assign-rider</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                <span className="text-white text-sm font-mono">POST /api/v1/payment/initialize</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="mb-16">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+      Quick start
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+      Get up and running with the DPM Delivery API in minutes
+    </p>
+
+    <Steps>
+      <Step title="Set up your environment">
+        Clone the repository and install dependencies:
+
+        ```bash
+        git clone https://github.com/Felix-Asante/DPM-delivery-api.git
+        cd DPM-delivery-api
+        npm install
+        ```
+
+        Copy the `.env.example` file to `.env` and configure your environment variables.
+      </Step>
+
+      <Step title="Configure the database">
+        Set up your PostgreSQL database and update the connection details in your `.env` file:
+
+        ```bash
+        TYPEORM_HOST=localhost
+        TYPEORM_PORT=5432
+        TYPEORM_USERNAME=your_username
+        TYPEORM_PASSWORD=your_password
+        TYPEORM_DATABASE=dpm_delivery
+        ```
+
+        Run migrations to set up the database schema:
+
+        ```bash
+        npm run migration:run
+        ```
+      </Step>
+
+      <Step title="Start the server">
+        Launch the development server:
+
+        ```bash
+        npm run start:dev
+        ```
+
+        The API will be available at `http://localhost:8080/api/v1/`
+      </Step>
+
+      <Step title="Make your first request">
+        Create a user account to get started:
+
+        ```bash cURL
+        curl -X POST http://localhost:8080/api/v1/auth/signup \
+          -H "Content-Type: application/json" \
+          -d '{
+            "phone": "+233241234567",
+            "password": "SecurePass123!",
+            "role": "USER"
+          }'
+        ```
+
+        <Accordion title="Example response">
+          ```json
+          {
+            "message": "User created successfully. Verification code sent to phone.",
+            "user": {
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "phone": "+233241234567",
+              "role": "USER",
+              "isVerified": false,
+              "createdAt": "2024-03-04T10:30:00.000Z"
+            }
+          }
+          ```
+        </Accordion>
+      </Step>
+    </Steps>
+  </div>
+
+  <div className="mb-16">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+      Key features
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+      Everything you need to build a complete delivery management platform
+    </p>
+
+    <CardGroup cols={2}>
+      <Card title="Authentication & RBAC" icon="shield-halved" href="/authentication">
+        Role-based access control with Admin, User, Place Admin, and Courier roles
+      </Card>
+      <Card title="Booking management" icon="calendar-check" href="/api/bookings/overview">
+        Complete booking lifecycle with status tracking and notifications
+      </Card>
+      <Card title="Shipment tracking" icon="truck-fast" href="/api/shipping/overview">
+        Real-time tracking with rider assignment and delivery updates
+      </Card>
+      <Card title="Payment integration" icon="credit-card" href="/api/payments/overview">
+        Integrated Paystack payment processing with wallet support
+      </Card>
+      <Card title="Multi-tenant places" icon="store" href="/api/places/overview">
+        Manage multiple vendors and their products in one platform
+      </Card>
+      <Card title="Analytics & reporting" icon="chart-line" href="/api/analytics/overview">
+        Business insights with sales tracking and performance metrics
+      </Card>
+    </CardGroup>
+  </div>
+
+  <div className="mb-16">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+      Explore by topic
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+      Deep dive into specific areas of the API
+    </p>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <a href="/concepts/architecture" className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#2563eb] dark:hover:border-[#2563eb] overflow-hidden transition-all no-underline bg-white dark:bg-[#1a1d27]">
+        <div className="p-6">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#2563eb] transition-colors">
+            Architecture overview
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Understand the NestJS architecture, modules, and how components interact
+          </p>
+          <div className="flex items-center text-sm font-medium text-[#2563eb]">
+            Learn more
+            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </a>
+
+      <a href="/concepts/user-roles" className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#2563eb] dark:hover:border-[#2563eb] overflow-hidden transition-all no-underline bg-white dark:bg-[#1a1d27]">
+        <div className="p-6">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#2563eb] transition-colors">
+            User roles & permissions
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Learn about the four role types and their access levels
+          </p>
+          <div className="flex items-center text-sm font-medium text-[#2563eb]">
+            Learn more
+            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </a>
+
+      <a href="/concepts/booking-workflow" className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#2563eb] dark:hover:border-[#2563eb] overflow-hidden transition-all no-underline bg-white dark:bg-[#1a1d27]">
+        <div className="p-6">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#2563eb] transition-colors">
+            Booking workflow
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Step-by-step guide to the booking lifecycle from creation to completion
+          </p>
+          <div className="flex items-center text-sm font-medium text-[#2563eb]">
+            Learn more
+            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </a>
+
+      <a href="/guides/integration-guide" className="group block rounded-2xl border border-gray-200 dark:border-[#27272a] hover:border-[#2563eb] dark:hover:border-[#2563eb] overflow-hidden transition-all no-underline bg-white dark:bg-[#1a1d27]">
+        <div className="p-6">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#2563eb] transition-colors">
+            Integration guide
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Connect third-party services like Paystack, Twilio, and Cloudinary
+          </p>
+          <div className="flex items-center text-sm font-medium text-[#2563eb]">
+            Learn more
+            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div className="mb-16">
+    <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white mb-4">
+      API documentation
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+      Complete reference for all API endpoints
+    </p>
+
+    <CardGroup cols={3}>
+      <Card title="Authentication" icon="key" href="/api/auth/signup">
+        User registration, login, and password management
+      </Card>
+      <Card title="Bookings" icon="book" href="/api/bookings/overview">
+        Create and manage delivery bookings
+      </Card>
+      <Card title="Shipping" icon="box" href="/api/shipping/overview">
+        Track shipments and assign riders
+      </Card>
+      <Card title="Users & Riders" icon="users" href="/api/users/overview">
+        Manage users and courier accounts
+      </Card>
+      <Card title="Places & Products" icon="shopping-bag" href="/api/places/overview">
+        Vendor and product management
+      </Card>
+      <Card title="Payments" icon="wallet" href="/api/payments/overview">
+        Payment processing and wallet operations
+      </Card>
+    </CardGroup>
+  </div>
+</div>
+
+<div className="bg-gradient-to-r from-[#1e40af] to-[#2563eb] dark:from-[#1a1d27] dark:to-[#0f172a]">
+  <div className="max-w-5xl mx-auto px-6 py-16">
+    <div className="text-center">
+      <h2 className="text-3xl font-bold text-white mb-4">
+        Ready to get started?
+      </h2>
+      <p className="text-lg text-blue-100 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+        Follow our quickstart guide to make your first API call in minutes
+      </p>
+      <a
+        href="/quickstart"
+        className="inline-flex items-center px-8 py-3 rounded-lg bg-white text-[#2563eb] font-semibold hover:bg-gray-100 transition-colors"
+      >
+        Get started now
+        <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</div>

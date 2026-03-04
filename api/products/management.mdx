@@ -1,0 +1,357 @@
+---
+title: 'Product Management'
+description: 'Create, update, and manage products for places in the DPM Delivery platform'
+---
+
+## Create Product
+
+Create a new product for a place. The product must be assigned to a valid product category.
+
+```http
+POST /products
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` or `PLACE_ADMIN` roles
+
+<Note>
+Place admins can only create products for product categories that belong to their place. The system validates ownership through the category-place relationship.
+</Note>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Product name
+</ParamField>
+
+<ParamField body="description" type="string">
+  Product description
+  
+  Can include:
+  - Ingredients (for food items)
+  - Service details
+  - Product specifications
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  Product price (decimal format)
+</ParamField>
+
+<ParamField body="productCategory" type="string" required>
+  Product category ID (UUID)
+  
+  Must be a valid ProductsCategory that belongs to a place.
+</ParamField>
+
+<ParamField body="photo" type="file">
+  Product image file (multipart/form-data)
+  
+  Accepts image formats only (validated by imageFileFilter)
+</ParamField>
+
+### Example Request
+
+```http
+POST /products
+Content-Type: multipart/form-data
+Authorization: Bearer {token}
+
+name=Jollof Rice
+description=Traditional Ghanaian jollof rice with chicken
+price=25.50
+productCategory=cat-uuid-123
+photo=@jollof-rice.jpg
+```
+
+### Response
+
+```json
+{
+  "id": "prod-123e4567-e89b-12d3-a456-426614174000",
+  "name": "Jollof Rice",
+  "description": "Traditional Ghanaian jollof rice with chicken",
+  "price": 25.50,
+  "photo": "https://storage.example.com/products/jollof-rice.jpg",
+  "productCategory": {
+    "id": "cat-uuid-123",
+    "name": "Main Dishes",
+    "slug": "main-dishes",
+    "place": {
+      "id": "place-uuid-456",
+      "name": "Golden Spoon Restaurant"
+    }
+  },
+  "offers": [],
+  "createdAt": "2024-03-04T10:00:00Z",
+  "updatedAt": "2024-03-04T10:00:00Z"
+}
+```
+
+---
+
+## Update Product
+
+Update an existing product's details.
+
+```http
+PUT /products/:id
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` or `PLACE_ADMIN` roles
+
+<Note>
+Place admins can only update products that belong to their place's product categories.
+</Note>
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Product ID (UUID)
+</ParamField>
+
+### Request Body
+
+All fields are sent in the update (not partial updates):
+
+<ParamField body="name" type="string" required>
+  Product name
+</ParamField>
+
+<ParamField body="description" type="string">
+  Product description
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  Product price
+</ParamField>
+
+<ParamField body="productCategory" type="string" required>
+  Product category ID (UUID)
+</ParamField>
+
+<ParamField body="photo" type="file">
+  New product image (multipart/form-data)
+  
+  If not provided, existing photo is retained.
+</ParamField>
+
+### Example Request
+
+```http
+PUT /products/prod-123e4567-e89b-12d3-a456-426614174000
+Content-Type: multipart/form-data
+Authorization: Bearer {token}
+
+name=Jollof Rice with Chicken
+description=Traditional Ghanaian jollof rice with grilled chicken
+price=28.00
+productCategory=cat-uuid-123
+```
+
+### Response
+
+Returns the updated product object.
+
+---
+
+## Get Product by ID
+
+Retrieve a single product by its UUID.
+
+```http
+GET /products/:id
+```
+
+**Authentication**: Not required
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Product ID (UUID)
+</ParamField>
+
+### Response
+
+```json
+{
+  "id": "prod-123e4567-e89b-12d3-a456-426614174000",
+  "name": "Jollof Rice",
+  "description": "Traditional Ghanaian jollof rice with chicken",
+  "price": 25.50,
+  "photo": "https://storage.example.com/products/jollof-rice.jpg",
+  "productCategory": {
+    "id": "cat-uuid-123",
+    "name": "Main Dishes",
+    "slug": "main-dishes",
+    "place": {
+      "id": "place-uuid-456",
+      "name": "Golden Spoon Restaurant",
+      "slug": "golden-spoon-restaurant",
+      "category": {
+        "name": "Restaurants"
+      }
+    }
+  },
+  "offers": [
+    {
+      "id": "offer-123",
+      "discountPercentage": 10,
+      "active": true
+    }
+  ],
+  "createdAt": "2024-03-04T10:00:00Z",
+  "updatedAt": "2024-03-04T10:00:00Z"
+}
+```
+
+---
+
+## Delete Product
+
+Permanently delete a product from a place's catalog.
+
+```http
+DELETE /products/:id
+```
+
+**Authentication**: Required (Bearer token)  
+**Authorization**: `ADMIN` or `PLACE_ADMIN` roles
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Product ID (UUID)
+</ParamField>
+
+### Response
+
+```json
+{
+  "message": "Product deleted successfully"
+}
+```
+
+<Warning>
+Deleting a product will also remove:
+- Associated offers
+- Order history references (OrderedProducts will retain the reference but product details may be unavailable)
+</Warning>
+
+---
+
+## Get Products by Place
+
+To retrieve all products for a specific place, use the Places API:
+
+```http
+GET /places/:id/products
+```
+
+See [Get Place Products](/api/places/management#get-place-products) for details.
+
+---
+
+## Product Categories vs Business Categories
+
+It's important to distinguish between two types of categories in the system:
+
+### Product Categories (ProductsCategory)
+
+- **Scope**: Place-specific
+- **Purpose**: Organize products within a place's menu/catalog
+- **Examples**: "Main Dishes", "Appetizers", "Beverages", "Over-the-Counter Medicines"
+- **Managed by**: Place admins and super admins
+- **Relationship**: `ProductsCategory` → `Place`
+
+### Business Categories (Category)
+
+- **Scope**: Global/system-wide
+- **Purpose**: Classify places by business type
+- **Examples**: "Restaurants", "Pharmacies", "Grocery Stores"
+- **Managed by**: Super admins only
+- **Relationship**: `Place` → `Category`
+- **API**: See [Categories API](/api/categories/overview)
+
+<Note>
+When creating a product, you specify a **Product Category** (ProductsCategory), not a business category (Category).
+</Note>
+
+---
+
+## Data Model
+
+### Product Entity
+
+```typescript
+{
+  id: string;                    // UUID
+  name: string;
+  description: string | null;
+  photo: string | null;
+  price: number;                 // Default: 0.0
+  productCategory: ProductsCategory;
+  offers: Offer[];               // Eager loaded
+  orders: OrderedProducts[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### ProductsCategory Entity
+
+```typescript
+{
+  id: string;                    // UUID
+  name: string;
+  slug: string;                  // Auto-generated
+  place: Place;                  // Parent place
+  products: Product[];           // Products in this category
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+## Examples
+
+### Creating a Complete Menu
+
+1. **Create Product Category**:
+```http
+POST /products-category
+{
+  "name": "Main Dishes",
+  "place": "place-uuid-456"
+}
+```
+
+2. **Add Products**:
+```http
+POST /products
+{
+  "name": "Jollof Rice",
+  "price": 25.50,
+  "productCategory": "cat-uuid-123"
+}
+
+POST /products
+{
+  "name": "Fufu with Light Soup",
+  "price": 30.00,
+  "productCategory": "cat-uuid-123"
+}
+```
+
+### Updating Product Price
+
+```http
+PUT /products/prod-123
+{
+  "name": "Jollof Rice",
+  "description": "Traditional Ghanaian jollof rice with chicken",
+  "price": 28.00,  // Updated price
+  "productCategory": "cat-uuid-123"
+}
+```

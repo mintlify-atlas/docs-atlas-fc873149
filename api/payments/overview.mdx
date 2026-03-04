@@ -1,0 +1,100 @@
+---
+title: 'Payments API Overview'
+description: 'Mobile money payment processing with Kowri integration'
+---
+
+## Introduction
+
+The DPM Delivery API integrates with Kowri payment gateway to enable mobile money payments from customers. The payment system supports major Ghanaian mobile money providers including MTN Mobile Money, AirtelTigo Money, and Telecel Cash.
+
+## Payment Flow
+
+The payment process follows these steps:
+
+1. **Payment Initialization** - Create a payment request with customer and transaction details
+2. **Customer Authorization** - Customer approves payment on their mobile device
+3. **Payment Verification** - Check payment status to confirm completion
+4. **Account Verification** - Verify mobile money account before processing (optional)
+
+## Supported Providers
+
+The following mobile money providers are supported:
+
+<CardGroup cols={3}>
+  <Card title="MTN Mobile Money" icon="phone">
+    Provider code: `MOMO`
+  </Card>
+  <Card title="AirtelTigo Money" icon="phone">
+    Provider code: `AIRTELTIGO`
+  </Card>
+  <Card title="Telecel Cash" icon="phone">
+    Provider code: `TELECEL`
+  </Card>
+</CardGroup>
+
+## Authentication
+
+All payment endpoints require JWT authentication:
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+**Required Roles**: `USER` or `ADMIN`
+
+## Configuration
+
+The payment service uses the following environment variables:
+
+<ParamField path="KOWRI_APP_ID" type="string" required>
+  Your Kowri application ID
+</ParamField>
+
+<ParamField path="KOWRI_APP_REFERENCE" type="string" required>
+  Your Kowri application reference
+</ParamField>
+
+<ParamField path="KOWRI_APP_SECRET" type="string" required>
+  Your Kowri application secret key
+</ParamField>
+
+<ParamField path="PAYSTACK_SECRET" type="string" required>
+  Paystack secret key for account verification
+</ParamField>
+
+## Mobile Money Provider Codes
+
+Internal mapping between provider names and Kowri codes:
+
+```typescript
+const MOBILE_MONEY_CODES = {
+  MOMO: 'MTN',           // MTN Mobile Money
+  AIRTELTIGO: 'ATL',     // AirtelTigo Money
+  TELECEL: 'VOD',        // Telecel Cash (formerly Vodafone)
+};
+```
+
+## Service Code
+
+All payment requests use the service code `3058` for the Kowri integration.
+
+## Error Handling
+
+The API returns error responses from the payment provider. Common error scenarios:
+
+- Invalid mobile money number
+- Insufficient balance
+- Transaction timeout
+- Provider service unavailable
+- Invalid provider code
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Payment Integration" icon="code" href="/api/payments/integration">
+    Learn how to implement payment flows
+  </Card>
+  <Card title="Wallet System" icon="wallet" href="/api/wallets/overview">
+    Understand the digital wallet system
+  </Card>
+</CardGroup>

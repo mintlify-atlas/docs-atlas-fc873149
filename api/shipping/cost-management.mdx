@@ -1,0 +1,375 @@
+---
+title: "Cost Management"
+description: "Set and manage shipment costs including delivery fees, rider commissions, and payment tracking"
+---
+
+## Endpoint
+
+```
+PATCH /api/v1/shipping/:id/set-cost
+```
+
+## Description
+
+Sets or updates the cost structure for a shipment, including pickup fees, delivery fees, rider commissions, and optional repackaging fees. This endpoint also tracks payment status and calculates the total cost automatically.
+
+## Authentication
+
+Required - Bearer token
+
+## Roles
+
+- **Admin** - Full access
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the shipment for which to set costs
+</ParamField>
+
+## Request Body
+
+<ParamField body="pickupFee" type="number" required>
+  Fee charged for picking up the package from the sender
+  
+  - Must be a valid number
+  - Typically covers fuel and rider time for pickup
+  - Example: 10.00
+</ParamField>
+
+<ParamField body="deliveryFee" type="number" required>
+  Fee charged for delivering the package to the recipient
+  
+  - Must be a valid number
+  - Main delivery charge based on distance and shipment option
+  - Example: 25.00
+</ParamField>
+
+<ParamField body="riderCommission" type="number" required>
+  Commission percentage for the rider (0-100)
+  
+  - Must be a valid number
+  - Maximum value: 100
+  - Represents the percentage of fees the rider receives
+  - Example: 15 (for 15%)
+</ParamField>
+
+<ParamField body="repackagingFee" type="number">
+  Additional fee for repackaging services if required
+  
+  - Optional field
+  - Must be a valid number if provided
+  - Default: 0
+  - Example: 5.00
+</ParamField>
+
+<ParamField body="paid" type="boolean" required>
+  Payment status indicator
+  
+  - `true` - Payment has been received
+  - `false` - Payment is pending
+</ParamField>
+
+<ParamField body="paidAt" type="date">
+  Timestamp when payment was received
+  
+  - Optional, but recommended when `paid` is `true`
+  - ISO 8601 format
+  - Automatically set to current time if `paid` is true and this field is not provided
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the cost was set successfully
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The created or updated shipment cost record
+  
+  <ResponseField name="id" type="string">
+    Unique identifier for the cost record
+  </ResponseField>
+  
+  <ResponseField name="shipmentOrderId" type="string">
+    ID of the associated shipment
+  </ResponseField>
+  
+  <ResponseField name="pickupFee" type="number">
+    Pickup fee amount
+  </ResponseField>
+  
+  <ResponseField name="deliveryFee" type="number">
+    Delivery fee amount
+  </ResponseField>
+  
+  <ResponseField name="riderCommission" type="number">
+    Rider commission percentage
+  </ResponseField>
+  
+  <ResponseField name="repackagingFee" type="number">
+    Repackaging fee amount (0 if not applicable)
+  </ResponseField>
+  
+  <ResponseField name="totalCost" type="number">
+    Automatically calculated total cost (pickupFee + deliveryFee + repackagingFee)
+  </ResponseField>
+  
+  <ResponseField name="paid" type="boolean">
+    Payment status
+  </ResponseField>
+  
+  <ResponseField name="paidAt" type="date">
+    Payment timestamp (null if not paid)
+  </ResponseField>
+  
+  <ResponseField name="createdAt" type="date">
+    Timestamp when the cost record was created
+  </ResponseField>
+  
+  <ResponseField name="updatedAt" type="date">
+    Timestamp of last update
+  </ResponseField>
+</ResponseField>
+
+## Request Example
+
+```bash
+curl -X PATCH https://api.dpmdelivery.com/api/v1/shipping/550e8400-e29b-41d4-a716-446655440000/set-cost \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pickupFee": 10.00,
+    "deliveryFee": 25.00,
+    "riderCommission": 15,
+    "repackagingFee": 5.00,
+    "paid": false
+  }'
+```
+
+## Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "cost-789",
+    "shipmentOrderId": "550e8400-e29b-41d4-a716-446655440000",
+    "pickupFee": 10.00,
+    "deliveryFee": 25.00,
+    "riderCommission": 15,
+    "repackagingFee": 5.00,
+    "totalCost": 40.00,
+    "paid": false,
+    "paidAt": null,
+    "createdAt": "2026-03-04T11:30:00.000Z",
+    "updatedAt": "2026-03-04T11:30:00.000Z"
+  },
+  "message": "Shipment cost set successfully"
+}
+```
+
+## Update Existing Cost
+
+The same endpoint can be used to update an existing cost record. If a cost already exists for the shipment, it will be updated rather than creating a new record.
+
+### Request Example - Marking as Paid
+
+```bash
+curl -X PATCH https://api.dpmdelivery.com/api/v1/shipping/550e8400-e29b-41d4-a716-446655440000/set-cost \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pickupFee": 10.00,
+    "deliveryFee": 25.00,
+    "riderCommission": 15,
+    "repackagingFee": 5.00,
+    "paid": true,
+    "paidAt": "2026-03-04T15:30:00Z"
+  }'
+```
+
+### Response Example - Updated and Paid
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "cost-789",
+    "shipmentOrderId": "550e8400-e29b-41d4-a716-446655440000",
+    "pickupFee": 10.00,
+    "deliveryFee": 25.00,
+    "riderCommission": 15,
+    "repackagingFee": 5.00,
+    "totalCost": 40.00,
+    "paid": true,
+    "paidAt": "2026-03-04T15:30:00.000Z",
+    "createdAt": "2026-03-04T11:30:00.000Z",
+    "updatedAt": "2026-03-04T15:30:00.000Z"
+  },
+  "message": "Shipment cost updated successfully"
+}
+```
+
+## Error Responses
+
+### 400 Bad Request - Invalid Number
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": [
+    "pickupFee must be a valid number",
+    "deliveryFee must be a valid number"
+  ],
+  "error": "Bad Request"
+}
+```
+
+### 400 Bad Request - Commission Exceeds Maximum
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": [
+    "riderCommission must not exceed 100"
+  ],
+  "error": "Bad Request"
+}
+```
+
+### 400 Bad Request - Missing Required Fields
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": [
+    "pickupFee should not be empty",
+    "deliveryFee should not be empty",
+    "riderCommission should not be empty",
+    "paid should not be empty"
+  ],
+  "error": "Bad Request"
+}
+```
+
+### 404 Not Found - Shipment Not Found
+
+```json
+{
+  "success": false,
+  "statusCode": 404,
+  "message": "Shipment not found",
+  "error": "Not Found"
+}
+```
+
+### 401 Unauthorized
+
+```json
+{
+  "success": false,
+  "statusCode": 401,
+  "message": "Unauthorized",
+  "error": "Unauthorized"
+}
+```
+
+### 403 Forbidden - Insufficient Permissions
+
+```json
+{
+  "success": false,
+  "statusCode": 403,
+  "message": "You do not have permission to perform this action",
+  "error": "Forbidden"
+}
+```
+
+## Cost Calculation Details
+
+### Total Cost Formula
+
+```
+totalCost = pickupFee + deliveryFee + repackagingFee
+```
+
+### Rider Earnings Calculation
+
+The rider commission is a percentage of the total fees:
+
+```
+riderEarnings = (pickupFee + deliveryFee) × (riderCommission / 100)
+```
+
+### Example Calculation
+
+Given:
+- Pickup Fee: 10.00
+- Delivery Fee: 25.00
+- Rider Commission: 15%
+- Repackaging Fee: 5.00
+
+Calculations:
+- Total Cost: 10.00 + 25.00 + 5.00 = **40.00**
+- Rider Earnings: (10.00 + 25.00) × 0.15 = **5.25**
+- Company Revenue: 40.00 - 5.25 = **34.75**
+
+## Common Use Cases
+
+### Setting Initial Costs
+
+When a shipment is first created, costs can be set based on:
+- Distance between pickup and delivery locations
+- Shipment option (standard, express, special, bulk)
+- Mode of shipment (Bike, Aboboyaa, Van)
+- Any special handling requirements
+
+### Updating Costs for Repackaging
+
+If a package needs repackaging during transit:
+
+```bash
+curl -X PATCH .../set-cost \
+  -d '{
+    "pickupFee": 10.00,
+    "deliveryFee": 25.00,
+    "riderCommission": 15,
+    "repackagingFee": 8.00,
+    "paid": false
+  }'
+```
+
+### Recording Payment
+
+When payment is received from the customer:
+
+```bash
+curl -X PATCH .../set-cost \
+  -d '{
+    "pickupFee": 10.00,
+    "deliveryFee": 25.00,
+    "riderCommission": 15,
+    "repackagingFee": 5.00,
+    "paid": true,
+    "paidAt": "2026-03-04T15:30:00Z"
+  }'
+```
+
+## Implementation Notes
+
+- The `totalCost` field is automatically calculated on the server side
+- If a cost record already exists for the shipment, it will be updated (upsert operation)
+- The `riderCommission` is stored as a percentage (0-100) not a decimal
+- All monetary values are stored as decimal types for precision
+- Setting `paid` to `true` should typically be done when payment is confirmed
+- The shipment cost is eagerly loaded with shipment queries for performance
+
+## Related Endpoints
+
+- [Create Shipment](/api/shipping/create-shipment) - Create new shipment
+- [Track Shipment](/api/shipping/track-shipment) - View shipment and cost details
+- [Rider Assignment](/api/shipping/rider-assignment) - Assign rider before setting costs

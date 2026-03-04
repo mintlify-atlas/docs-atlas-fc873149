@@ -1,0 +1,163 @@
+---
+title: 'Users API Overview'
+description: 'Manage user accounts, profiles, and wallet operations in the DPM Delivery system'
+---
+
+## Introduction
+
+The Users API provides endpoints for managing user accounts, profiles, bookings, and wallet operations. Users in the system can have different roles (User, Admin, Place Admin, or Courier/Rider) which determine their access permissions.
+
+## Base URL
+
+```
+/users
+```
+
+## User Roles
+
+The system supports four distinct user roles:
+
+<CardGroup cols={2}>
+  <Card title="User" icon="user">
+    Regular customers who can create bookings, manage their profile, and track deliveries.
+  </Card>
+  <Card title="Admin" icon="shield">
+    Super administrators with full system access including user management and analytics.
+  </Card>
+  <Card title="Place Admin" icon="building">
+    Administrators for specific places/locations who can manage their location's operations.
+  </Card>
+  <Card title="Courier/Rider" icon="motorcycle">
+    Delivery personnel who handle shipments and deliveries. Also called "Rider" in the system.
+  </Card>
+</CardGroup>
+
+## User Entity Structure
+
+<ResponseField name="id" type="string (UUID)">
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="phone" type="string" required>
+  User's phone number (indexed)
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  User's email address (indexed, optional)
+</ResponseField>
+
+<ResponseField name="fullName" type="string" required>
+  User's full name
+</ResponseField>
+
+<ResponseField name="address" type="string">
+  User's physical address
+</ResponseField>
+
+<ResponseField name="isVerified" type="boolean" default="false">
+  Whether the user's account has been verified
+</ResponseField>
+
+<ResponseField name="profilePicture" type="string">
+  URL to the user's profile picture
+</ResponseField>
+
+<ResponseField name="likes" type="string[]" default="[]">
+  Array of place IDs that the user has liked
+</ResponseField>
+
+<ResponseField name="role" type="Role">
+  User's role object containing role information
+</ResponseField>
+
+<ResponseField name="isDefaultPassword" type="boolean" default="false">
+  Indicates if user is still using a default password (common for riders)
+</ResponseField>
+
+<ResponseField name="adminFor" type="Place">
+  Place object if the user is a Place Admin
+</ResponseField>
+
+<ResponseField name="rider" type="Rider">
+  Rider details if the user has a Courier/Rider role
+</ResponseField>
+
+<ResponseField name="wallet" type="Wallet">
+  User's wallet information for managing funds
+</ResponseField>
+
+<ResponseField name="createdAt" type="string (ISO 8601)">
+  Timestamp when the user was created
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string (ISO 8601)">
+  Timestamp when the user was last updated
+</ResponseField>
+
+<Note>
+  The `password` field is never returned in API responses for security reasons.
+</Note>
+
+## Authentication
+
+All endpoints except user creation require Bearer token authentication:
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Key Features
+
+### Profile Management
+- Retrieve current user information
+- Update user profile (name, email, address, profile picture)
+- Change password
+
+### Bookings
+- View user's booking history
+- Filter bookings by status (pending, confirmed, delivered, etc.)
+
+### Likes
+- Manage favorite places
+- Track liked locations
+
+### Wallet Operations
+- View wallet balance
+- Track transaction history
+- Filter transactions by type
+
+### Admin Functions
+- List all users with filters
+- Get user count statistics
+- Delete users
+
+## Common Query Parameters
+
+Many list endpoints support pagination and filtering:
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Number of items per page
+</ParamField>
+
+<ParamField query="role" type="string">
+  Filter users by role (User, Admin, Place Admin, Rider)
+</ParamField>
+
+<ParamField query="query" type="string">
+  Search query to filter users by name, phone, or email
+</ParamField>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="User Management" icon="users" href="/api/users/management">
+    Learn about user CRUD operations and profile management
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    See how to authenticate and obtain access tokens
+  </Card>
+</CardGroup>

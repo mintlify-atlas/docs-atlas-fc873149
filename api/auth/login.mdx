@@ -1,0 +1,200 @@
+---
+title: "Login"
+description: "Authenticate a user and receive an access token"
+---
+
+## Endpoint
+
+```
+POST /api/v1/auth/login
+```
+
+Authenticates a user with their phone number and password, returning user details and a JWT access token for subsequent authenticated requests.
+
+## Request Body
+
+<ParamField body="phone" type="string" required>
+  The user's phone number in Ghana format
+  
+  **Validation**: 
+  - Must be a string (`@IsString`)
+  - Must be a valid Ghana phone number (`@IsPhoneNumber('GH')`)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  The user's password
+  
+  **Validation**: Must be a non-empty string (`@IsString`)
+</ParamField>
+
+## Response
+
+<ResponseField name="user" type="object">
+  User object containing account details
+  
+  <ResponseField name="id" type="string">
+    Unique identifier for the user
+  </ResponseField>
+  
+  <ResponseField name="fullName" type="string">
+    Full name of the user
+  </ResponseField>
+  
+  <ResponseField name="phone" type="string">
+    Phone number of the user
+  </ResponseField>
+  
+  <ResponseField name="email" type="string | null">
+    Email address (if provided)
+  </ResponseField>
+  
+  <ResponseField name="address" type="string | null">
+    User's address (if provided)
+  </ResponseField>
+  
+  <ResponseField name="isVerified" type="boolean">
+    Whether the account has been verified
+  </ResponseField>
+  
+  <ResponseField name="profilePicture" type="string | null">
+    URL to profile picture (if uploaded)
+  </ResponseField>
+  
+  <ResponseField name="likes" type="string[]">
+    Array of liked item IDs
+  </ResponseField>
+  
+  <ResponseField name="role" type="object">
+    User's role information
+  </ResponseField>
+  
+  <ResponseField name="isDefaultPassword" type="boolean">
+    Whether user is still using default password
+  </ResponseField>
+  
+  <ResponseField name="createdAt" type="string">
+    ISO 8601 timestamp of account creation
+  </ResponseField>
+  
+  <ResponseField name="updatedAt" type="string">
+    ISO 8601 timestamp of last update
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="accessToken" type="string">
+  JWT access token for authenticating subsequent requests
+  
+  **Usage**: Include in `Authorization` header as `Bearer <accessToken>`
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X POST https://api.dpm-delivery.com/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "+233201234567",
+    "password": "securePassword123"
+  }'
+```
+
+```json Request
+{
+  "phone": "+233201234567",
+  "password": "securePassword123"
+}
+```
+
+## Example Response
+
+<ResponseExample>
+```json 201 Success
+{
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "fullName": "John Doe",
+    "phone": "+233201234567",
+    "email": null,
+    "address": null,
+    "isVerified": true,
+    "profilePicture": null,
+    "likes": [],
+    "role": {
+      "id": "role-uuid",
+      "name": "USER"
+    },
+    "isDefaultPassword": false,
+    "createdAt": "2026-03-04T12:00:00.000Z",
+    "updatedAt": "2026-03-04T12:00:00.000Z"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsImZ1bGxOYW1lIjoiSm9obiBEb2UiLCJwaG9uZSI6IisyMzMyMDEyMzQ1NjciLCJpYXQiOjE2NDYzOTU4MDB9.xxxx"
+}
+```
+
+```json 400 Bad Request
+{
+  "statusCode": 400,
+  "message": "Invalid password",
+  "error": "Bad Request"
+}
+```
+
+```json 404 Not Found
+{
+  "statusCode": 404,
+  "message": "User not found",
+  "error": "Not Found"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "statusCode": 500,
+  "message": "Internal server error",
+  "error": "Internal Server Error"
+}
+```
+</ResponseExample>
+
+## Errors
+
+| Status Code | Description |
+|-------------|-------------|
+| 400 | Bad request - Invalid credentials or validation error |
+| 404 | User not found with provided phone number |
+| 500 | Internal server error |
+
+## Implementation Details
+
+**Source**: `src/auth/auth.controller.ts:62-69`
+
+**DTO**: `LoginDto` from `src/auth/dto/login.dto.ts`
+
+**Swagger Decorators**:
+- `@ApiBadRequestResponse({ description: 'Bad request' })`
+- `@ApiInternalServerErrorResponse({ description: 'Internal server error' })`
+- `@ApiNotFoundResponse()`
+- `@ApiCreatedResponse()`
+
+**Authentication Process**:
+1. Finds user by phone number in database
+2. Compares provided password with hashed password using bcrypt
+3. If password invalid, throws `BadRequestException` with "Invalid password" message
+4. If successful, generates JWT token containing user data
+5. Returns user object (with password field removed via `toJSON()`) and access token
+
+## Using the Access Token
+
+Include the returned `accessToken` in the `Authorization` header for protected endpoints:
+
+```bash
+curl -X GET https://api.dpm-delivery.com/api/v1/protected-endpoint \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+## Security Notes
+
+- Passwords are hashed using bcrypt with 10 salt rounds
+- Password field is automatically removed from user object in response via `toJSON()` method
+- JWT tokens contain user data and should be stored securely on the client
+- Phone numbers must match Ghana format for validation

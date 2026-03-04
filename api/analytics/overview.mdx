@@ -1,0 +1,329 @@
+---
+title: 'Analytics API'
+description: 'Access platform analytics, revenue metrics, and business intelligence data'
+---
+
+## Overview
+
+The Analytics API provides comprehensive business intelligence and reporting capabilities for the DPM Delivery platform. It aggregates data from shipping orders, costs, and payout requests to provide insights into revenue, payouts, and operational metrics.
+
+## Authentication
+
+All analytics endpoints require JWT authentication and **ADMIN** role access only.
+
+---
+
+## Get Dashboard Analytics
+
+<CodeGroup>
+```bash cURL
+curl -X GET https://api.dpm-delivery.com/analytics/dashboard \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.dpm-delivery.com/analytics/dashboard', {
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+
+const analytics = await response.json();
+console.log('Total Revenue:', analytics.totalRevenue);
+console.log('Total Orders:', analytics.totalOrders);
+```
+</CodeGroup>
+
+**Endpoint:** `GET /analytics/dashboard`
+
+**Required Role:** ADMIN
+
+**Description:** Retrieves comprehensive dashboard analytics including revenue, payouts, and order statistics.
+
+**Response:**
+```json
+{
+  "totalRevenue": 125000.50,
+  "totalPayouts": 95000.25,
+  "pendingPayouts": 15000.00,
+  "totalOrders": 1250
+}
+```
+
+<ResponseField name="totalRevenue" type="number">
+  Total amount earned from all paid shipment costs. Sum of all `shipment_costs` where `paid = true`.
+</ResponseField>
+
+<ResponseField name="totalPayouts" type="number">
+  Total amount paid out to delivery partners and place administrators. Sum of all completed payout requests.
+</ResponseField>
+
+<ResponseField name="pendingPayouts" type="number">
+  Total amount in pending payout requests waiting to be processed.
+</ResponseField>
+
+<ResponseField name="totalOrders" type="number">
+  Total count of all shipping orders in the system.
+</ResponseField>
+
+---
+
+## Metrics Breakdown
+
+### Revenue Calculation
+
+Total revenue is calculated by summing all paid shipment costs:
+
+```sql
+SELECT SUM(totalCost) as totalRevenue
+FROM shipment_costs
+WHERE paid = true
+```
+
+This represents the total amount the platform has collected from customers for delivery services.
+
+### Payout Calculations
+
+**Total Payouts:**
+```sql
+SELECT SUM(amount) as totalPayouts
+FROM payout_requests
+WHERE status = 'COMPLETED'
+```
+
+**Pending Payouts:**
+```sql
+SELECT SUM(amount) as pendingPayouts
+FROM payout_requests
+WHERE status = 'PENDING'
+```
+
+### Order Statistics
+
+**Total Orders:**
+```sql
+SELECT COUNT(*) as totalOrders
+FROM shipping_orders
+```
+
+---
+
+## Data Structures
+
+### Analytics Dashboard Object
+
+<ResponseField name="totalRevenue" type="number">
+  Total revenue from all paid shipments (in base currency units)
+  - Default: 0 if no revenue
+  - Calculated from shipment costs
+</ResponseField>
+
+<ResponseField name="totalPayouts" type="number">
+  Total completed payouts to partners (in base currency units)
+  - Default: 0 if no payouts
+  - Only includes COMPLETED status payouts
+</ResponseField>
+
+<ResponseField name="pendingPayouts" type="number">
+  Total pending payout amount (in base currency units)
+  - Default: 0 if no pending payouts
+  - Only includes PENDING status payouts
+</ResponseField>
+
+<ResponseField name="totalOrders" type="number">
+  Total number of shipping orders
+  - Includes all orders regardless of status
+  - Count-based metric
+</ResponseField>
+
+---
+
+## Business Intelligence Insights
+
+### Platform Health Metrics
+
+The analytics dashboard provides key metrics to assess platform health:
+
+**Net Revenue:**
+```javascript
+const netRevenue = totalRevenue - totalPayouts;
+```
+
+This represents the platform's earnings after paying delivery partners.
+
+**Payout Ratio:**
+```javascript
+const payoutRatio = (totalPayouts / totalRevenue) * 100;
+```
+
+Indicates what percentage of revenue is paid to partners.
+
+**Average Order Value:**
+```javascript
+const avgOrderValue = totalRevenue / totalOrders;
+```
+
+Shows the average revenue per order.
+
+**Pending Obligations:**
+```javascript
+const pendingObligations = pendingPayouts;
+```
+
+Amount the platform owes to partners.
+
+---
+
+## Data Sources
+
+The analytics data is aggregated from multiple entities:
+
+### Shipping Orders
+- **Entity:** `ShippingOrder`
+- **Metrics:** Total order count
+- **Purpose:** Track order volume and activity
+
+### Shipment Costs
+- **Entity:** `ShipmentCost`
+- **Metrics:** Total revenue (sum of paid costs)
+- **Purpose:** Calculate platform revenue
+- **Filter:** Only paid shipments are included
+
+### Payout Requests
+- **Entity:** `PayoutRequest`
+- **Metrics:** Total payouts (completed), Pending payouts
+- **Purpose:** Track partner payments and obligations
+- **Statuses:**
+  - `COMPLETED`: Included in totalPayouts
+  - `PENDING`: Included in pendingPayouts
+  - Other statuses: Not included in calculations
+
+---
+
+## Use Cases
+
+### Executive Dashboard
+
+Fetch analytics data to display on an admin dashboard:
+
+```javascript
+const analytics = await fetch('/analytics/dashboard', {
+  headers: { 'Authorization': `Bearer ${adminToken}` }
+}).then(r => r.json());
+
+// Display metrics
+console.log(`Revenue: $${analytics.totalRevenue.toLocaleString()}`);
+console.log(`Net Profit: $${(analytics.totalRevenue - analytics.totalPayouts).toLocaleString()}`);
+console.log(`Orders: ${analytics.totalOrders.toLocaleString()}`);
+```
+
+### Financial Reporting
+
+Generate financial reports using the analytics data:
+
+```javascript
+const generateReport = (analytics) => {
+  return {
+    period: 'All Time',
+    revenue: {
+      total: analytics.totalRevenue,
+      perOrder: analytics.totalRevenue / analytics.totalOrders
+    },
+    expenses: {
+      completed: analytics.totalPayouts,
+      pending: analytics.pendingPayouts,
+      total: analytics.totalPayouts + analytics.pendingPayouts
+    },
+    profit: {
+      gross: analytics.totalRevenue,
+      net: analytics.totalRevenue - analytics.totalPayouts,
+      margin: ((analytics.totalRevenue - analytics.totalPayouts) / analytics.totalRevenue * 100).toFixed(2) + '%'
+    },
+    operations: {
+      totalOrders: analytics.totalOrders
+    }
+  };
+};
+```
+
+### Monitoring Platform Performance
+
+Set up alerts based on analytics thresholds:
+
+```javascript
+const analytics = await fetchAnalytics();
+
+// Alert if pending payouts are too high
+if (analytics.pendingPayouts > analytics.totalRevenue * 0.2) {
+  console.warn('Pending payouts exceed 20% of total revenue');
+}
+
+// Alert if payout ratio is too high
+const payoutRatio = analytics.totalPayouts / analytics.totalRevenue;
+if (payoutRatio > 0.9) {
+  console.warn('Payout ratio is above 90% - low margin');
+}
+```
+
+---
+
+## Error Handling
+
+### Common Error Responses
+
+**401 Unauthorized:**
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "statusCode": 403,
+  "message": "Forbidden resource",
+  "error": "Forbidden"
+}
+```
+This occurs when a non-ADMIN user attempts to access analytics.
+
+---
+
+## Best Practices
+
+### Caching
+
+Since analytics calculations can be resource-intensive:
+
+- Cache analytics results for a reasonable duration (e.g., 5-15 minutes)
+- Use Redis or similar caching mechanism
+- Invalidate cache when significant events occur (new payouts, orders)
+
+### Rate Limiting
+
+- Implement rate limiting for analytics endpoints
+- Recommended: 60 requests per hour for admin users
+- Prevents excessive database queries
+
+### Data Export
+
+For detailed analysis:
+
+- Export raw data periodically for offline analysis
+- Use the analytics endpoint as a high-level overview
+- Implement additional reporting endpoints for granular data
+
+---
+
+## Future Enhancements
+
+The analytics system can be extended with:
+
+- **Time-based filtering**: Filter analytics by date range
+- **Trend analysis**: Compare metrics across time periods
+- **Geographic breakdown**: Analytics by region/location
+- **Category analysis**: Revenue by product/service category
+- **Partner performance**: Individual delivery partner metrics
+- **Customer analytics**: User behavior and retention metrics

@@ -1,0 +1,268 @@
+---
+title: "Create Shipment"
+description: "Create a new shipment order with pickup and delivery details"
+---
+
+## Endpoint
+
+```
+POST /api/v1/shipping
+```
+
+## Description
+
+Creates a new shipment order in the DPM Delivery system. This endpoint does not require authentication and can be used by customers to initiate shipment requests. A unique reference number is generated for tracking purposes.
+
+## Authentication
+
+No authentication required.
+
+## Request Body
+
+<ParamField body="pickupArea" type="string" required>
+  The specific area or location for package pickup (e.g., street name, landmark)
+</ParamField>
+
+<ParamField body="pickupCity" type="enum" required>
+  City where the package will be picked up
+  
+  **Allowed values:**
+  - `Nkawkaw`
+  - `Koforidua`
+  - `Donkorkrom`
+</ParamField>
+
+<ParamField body="dropOffArea" type="string" required>
+  The specific area or location for package delivery
+</ParamField>
+
+<ParamField body="dropOffCity" type="enum" required>
+  City where the package will be delivered
+  
+  **Allowed values:**
+  - `Nkawkaw`
+  - `Koforidua`
+  - `Donkorkrom`
+</ParamField>
+
+<ParamField body="senderPhone" type="string" required>
+  Phone number of the sender (package owner)
+</ParamField>
+
+<ParamField body="recipientPhone" type="string" required>
+  Phone number of the recipient (delivery recipient)
+</ParamField>
+
+<ParamField body="shipmentOption" type="enum" required>
+  Type of delivery service requested
+  
+  **Allowed values:**
+  - `standard_delivery` - Standard delivery service
+  - `express_delivery` - Expedited delivery
+  - `special_delivery` - Special handling requirements
+  - `bulk_delivery` - Bulk shipments
+</ParamField>
+
+<ParamField body="modeOfShipment" type="enum" required>
+  Transportation mode for the shipment
+  
+  **Allowed values:**
+  - `Bike` - Motorcycle delivery
+  - `Aboboyaa` - Tricycle delivery
+  - `Van` - Van delivery
+</ParamField>
+
+<ParamField body="extraInformation" type="string">
+  Additional notes or special instructions for the shipment (e.g., fragile items, delivery instructions)
+</ParamField>
+
+<ParamField body="pickupDate" type="date">
+  Preferred or scheduled pickup date (ISO 8601 format)
+</ParamField>
+
+<ParamField body="dropOffDate" type="date">
+  Expected or scheduled delivery date (ISO 8601 format)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the shipment was created successfully
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The created shipment order
+  
+  <ResponseField name="id" type="string">
+    Unique identifier for the shipment
+  </ResponseField>
+  
+  <ResponseField name="reference" type="string">
+    Unique tracking reference number (e.g., DPM-2024-001234)
+  </ResponseField>
+  
+  <ResponseField name="status" type="string">
+    Initial status of the shipment (typically `pending`)
+  </ResponseField>
+  
+  <ResponseField name="pickupCity" type="string">
+    Pickup city
+  </ResponseField>
+  
+  <ResponseField name="pickupArea" type="string">
+    Pickup area/location
+  </ResponseField>
+  
+  <ResponseField name="senderPhone" type="string">
+    Sender's phone number
+  </ResponseField>
+  
+  <ResponseField name="dropOffCity" type="string">
+    Delivery city
+  </ResponseField>
+  
+  <ResponseField name="dropOffArea" type="string">
+    Delivery area/location
+  </ResponseField>
+  
+  <ResponseField name="recipientPhone" type="string">
+    Recipient's phone number
+  </ResponseField>
+  
+  <ResponseField name="shipmentOption" type="string">
+    Selected shipment delivery option
+  </ResponseField>
+  
+  <ResponseField name="modeOfShipment" type="string">
+    Selected transportation mode
+  </ResponseField>
+  
+  <ResponseField name="extraInformation" type="string">
+    Additional shipment notes
+  </ResponseField>
+  
+  <ResponseField name="pickupDate" type="date">
+    Scheduled pickup date
+  </ResponseField>
+  
+  <ResponseField name="dropOffDate" type="date">
+    Expected delivery date
+  </ResponseField>
+  
+  <ResponseField name="confirmationCode" type="string">
+    Delivery confirmation code (generated on delivery)
+  </ResponseField>
+  
+  <ResponseField name="createdAt" type="date">
+    Timestamp when the shipment was created
+  </ResponseField>
+  
+  <ResponseField name="updatedAt" type="date">
+    Timestamp of last update
+  </ResponseField>
+</ResponseField>
+
+## Request Example
+
+```bash
+curl -X POST https://api.dpmdelivery.com/api/v1/shipping \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pickupArea": "Zongo Junction, near the market",
+    "pickupCity": "Nkawkaw",
+    "dropOffArea": "Galloway, opposite the police station",
+    "dropOffCity": "Koforidua",
+    "senderPhone": "+233244123456",
+    "recipientPhone": "+233209876543",
+    "shipmentOption": "express_delivery",
+    "modeOfShipment": "Bike",
+    "extraInformation": "Fragile items - handle with care",
+    "pickupDate": "2026-03-05T09:00:00Z",
+    "dropOffDate": "2026-03-05T15:00:00Z"
+  }'
+```
+
+## Response Example
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "reference": "DPM-2026-003045",
+    "status": "pending",
+    "pickupCity": "Nkawkaw",
+    "pickupArea": "Zongo Junction, near the market",
+    "senderPhone": "+233244123456",
+    "pickupDate": "2026-03-05T09:00:00.000Z",
+    "dropOffCity": "Koforidua",
+    "dropOffArea": "Galloway, opposite the police station",
+    "recipientPhone": "+233209876543",
+    "dropOffDate": "2026-03-05T15:00:00.000Z",
+    "extraInformation": "Fragile items - handle with care",
+    "shipmentOption": "express_delivery",
+    "modeOfShipment": "Bike",
+    "confirmationCode": null,
+    "rider": null,
+    "shipmentCost": null,
+    "createdAt": "2026-03-04T10:30:00.000Z",
+    "updatedAt": "2026-03-04T10:30:00.000Z"
+  },
+  "message": "Shipment created successfully. Your tracking reference is DPM-2026-003045"
+}
+```
+
+## Error Responses
+
+### 400 Bad Request - Missing Required Fields
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": [
+    "pickupArea should not be empty",
+    "pickupCity must be a valid enum value",
+    "senderPhone should not be empty"
+  ],
+  "error": "Bad Request"
+}
+```
+
+### 400 Bad Request - Invalid Enum Value
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": [
+    "pickupCity must be one of the following values: Nkawkaw, Koforidua, Donkorkrom"
+  ],
+  "error": "Bad Request"
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "success": false,
+  "statusCode": 500,
+  "message": "An error occurred while creating the shipment",
+  "error": "Internal Server Error"
+}
+```
+
+## Implementation Notes
+
+- The `reference` number is automatically generated and should be provided to the customer for tracking
+- Initial shipment status is set to `pending`
+- Notifications are automatically sent to both sender and recipient when a shipment is created
+- Date fields accept ISO 8601 format strings and are automatically converted to Date objects
+- Phone numbers should include country code (e.g., +233 for Ghana)
+
+## Related Endpoints
+
+- [Track Shipment](/api/shipping/track-shipment) - Track shipment using the reference number
+- [Rider Assignment](/api/shipping/rider-assignment) - Assign a rider to the shipment
+- [Cost Management](/api/shipping/cost-management) - Set delivery costs
