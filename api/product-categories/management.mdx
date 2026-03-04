@@ -1,0 +1,358 @@
+---
+title: Product category management
+description: Complete API reference for product category CRUD operations
+---
+
+This page documents all endpoints for managing product categories within places.
+
+## Create category
+
+`POST /api/v1/products-category`
+
+Create a new product category for a place. Requires Admin or Place Admin role.
+
+### Request body
+
+<ParamField path="name" type="string" required>
+  Category name (e.g., "Appetizers", "Main Courses")
+</ParamField>
+
+<ParamField path="place" type="string" required>
+  UUID of the place this category belongs to
+</ParamField>
+
+### Example request
+
+```bash cURL
+curl -X POST http://localhost:8080/api/v1/products-category \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "Main Courses",
+    "place": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "650e8400-e29b-41d4-a716-446655440001",
+  "name": "Main Courses",
+  "slug": "main-courses",
+  "place": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Kofi's Kitchen"
+  },
+  "products": [],
+  "createdAt": "2024-03-04T10:30:00.000Z",
+  "updatedAt": "2024-03-04T10:30:00.000Z"
+}
+```
+
+<Note>
+  The slug is automatically generated from the category name (e.g., "Main Courses" → "main-courses")
+</Note>
+
+---
+
+## List categories
+
+`GET /api/v1/products-category`
+
+Get all product categories. Requires Admin role.
+
+### Example request
+
+```bash cURL
+curl -X GET http://localhost:8080/api/v1/products-category \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Response
+
+```json
+[
+  {
+    "id": "650e8400-e29b-41d4-a716-446655440001",
+    "name": "Main Courses",
+    "slug": "main-courses",
+    "place": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "Kofi's Kitchen"
+    },
+    "products": [...]
+  },
+  {
+    "id": "650e8400-e29b-41d4-a716-446655440002",
+    "name": "Beverages",
+    "slug": "beverages",
+    "place": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "Kofi's Kitchen"
+    },
+    "products": [...]
+  }
+]
+```
+
+---
+
+## Get categories by place
+
+`GET /api/v1/products-category/place/:placeId`
+
+Get all product categories for a specific place. Public endpoint.
+
+### Path parameters
+
+<ParamField path="placeId" type="string" required>
+  UUID of the place
+</ParamField>
+
+### Example request
+
+```bash cURL
+curl -X GET http://localhost:8080/api/v1/products-category/place/550e8400-e29b-41d4-a716-446655440000
+```
+
+### Response
+
+```json
+[
+  {
+    "id": "650e8400-e29b-41d4-a716-446655440001",
+    "name": "Main Courses",
+    "slug": "main-courses"
+  },
+  {
+    "id": "650e8400-e29b-41d4-a716-446655440002",
+    "name": "Beverages",
+    "slug": "beverages"
+  }
+]
+```
+
+<Info>
+  This endpoint is useful for displaying category filters on place detail pages
+</Info>
+
+---
+
+## Get category by ID
+
+`GET /api/v1/products-category/:id`
+
+Retrieve a single product category by its ID. Public endpoint.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the category
+</ParamField>
+
+### Example request
+
+```bash cURL
+curl -X GET http://localhost:8080/api/v1/products-category/650e8400-e29b-41d4-a716-446655440001
+```
+
+### Response
+
+```json
+{
+  "id": "650e8400-e29b-41d4-a716-446655440001",
+  "name": "Main Courses",
+  "slug": "main-courses",
+  "place": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Kofi's Kitchen"
+  },
+  "products": [
+    {
+      "id": "750e8400-e29b-41d4-a716-446655440001",
+      "name": "Jollof Rice",
+      "price": 25.00
+    }
+  ]
+}
+```
+
+---
+
+## Get category by slug
+
+`GET /api/v1/products-category/:slug/slug`
+
+Retrieve a category by its URL-friendly slug. Public endpoint.
+
+### Path parameters
+
+<ParamField path="slug" type="string" required>
+  URL slug of the category (e.g., "main-courses")
+</ParamField>
+
+### Example request
+
+```bash cURL
+curl -X GET http://localhost:8080/api/v1/products-category/main-courses/slug
+```
+
+### Response
+
+```json
+{
+  "id": "650e8400-e29b-41d4-a716-446655440001",
+  "name": "Main Courses",
+  "slug": "main-courses",
+  "place": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Kofi's Kitchen"
+  }
+}
+```
+
+<Tip>
+  Use slugs in URLs for SEO-friendly category pages (e.g., `/places/kofis-kitchen/main-courses`)
+</Tip>
+
+---
+
+## Update category
+
+`PUT /api/v1/products-category/:id`
+
+Update a product category name. Requires Admin or Place Admin role.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the category to update
+</ParamField>
+
+### Request body
+
+<ParamField path="name" type="string" required>
+  New category name
+</ParamField>
+
+### Example request
+
+```bash cURL
+curl -X PUT http://localhost:8080/api/v1/products-category/650e8400-e29b-41d4-a716-446655440001 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "Entrées"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "650e8400-e29b-41d4-a716-446655440001",
+  "name": "Entrées",
+  "slug": "entrees",
+  "updatedAt": "2024-03-04T11:00:00.000Z"
+}
+```
+
+<Warning>
+  Updating the category name will regenerate the slug, which may break existing URLs
+</Warning>
+
+---
+
+## Delete category
+
+`DELETE /api/v1/products-category/:id`
+
+Delete a product category. Requires Admin or Place Admin role.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the category to delete
+</ParamField>
+
+### Example request
+
+```bash cURL
+curl -X DELETE http://localhost:8080/api/v1/products-category/650e8400-e29b-41d4-a716-446655440001 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "message": "Category deleted successfully"
+}
+```
+
+<Warning>
+  Deleting a category may affect products that reference it. Ensure products are reassigned or deleted first.
+</Warning>
+
+---
+
+## Error responses
+
+### 400 Bad Request
+
+Invalid UUID format or missing required fields:
+
+```json
+{
+  "statusCode": 400,
+  "message": "Validation failed",
+  "error": "Bad Request"
+}
+```
+
+### 401 Unauthorized
+
+Missing or invalid JWT token:
+
+```json
+{
+  "statusCode": 401,
+  "message": "Unauthorized"
+}
+```
+
+### 403 Forbidden
+
+Insufficient permissions (not Admin or Place Admin):
+
+```json
+{
+  "statusCode": 403,
+  "message": "Forbidden resource",
+  "error": "Forbidden"
+}
+```
+
+### 404 Not Found
+
+Category or place not found:
+
+```json
+{
+  "statusCode": 404,
+  "message": "Category not found",
+  "error": "Not Found"
+}
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Products API" icon="box" href="/api/products/management">
+    Learn how to create products within categories
+  </Card>
+  <Card title="Places API" icon="store" href="/api/places/management">
+    Manage places that contain product categories
+  </Card>
+</CardGroup>

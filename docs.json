@@ -98,6 +98,8 @@
               "api/places/management",
               "api/products/overview",
               "api/products/management",
+              "api/product-categories/overview",
+              "api/product-categories/management",
               "api/categories/overview"
             ]
           },

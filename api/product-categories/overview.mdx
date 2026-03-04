@@ -1,0 +1,148 @@
+---
+title: Product categories API
+description: Manage product categories within places for organizing menu items and inventory
+---
+
+The Product Categories API allows you to create and manage product categories within places. Product categories are different from business categories - they are used to organize products within a specific place (e.g., "Appetizers", "Main Courses", "Beverages" for a restaurant).
+
+<Note>
+  Product categories are scoped to individual places. Each place can have its own set of product categories to organize their products.
+</Note>
+
+## Base URL
+
+All product category endpoints are prefixed with `/api/v1/products-category`
+
+## Authentication
+
+Most endpoints require JWT authentication with role-based access control:
+- **Admin**: Full CRUD access to all product categories
+- **Place Admin**: Can create, update, and delete categories for their own place
+- **Public**: Can view categories by ID or slug
+
+## Product categories vs business categories
+
+| Feature | Product Categories | Business Categories |
+|---------|-------------------|---------------------|
+| Scope | Specific to a place | Global across platform |
+| Purpose | Organize products within a place | Classify types of businesses |
+| Created by | Admin or Place Admin | Admin only |
+| Example | "Pizzas", "Desserts" | "Restaurant", "Pharmacy" |
+| Endpoint | `/products-category` | `/categories` |
+
+## Available endpoints
+
+<CardGroup cols={2}>
+  <Card title="Create category" icon="plus" href="/api/product-categories/management#create-category">
+    Create a new product category for a place
+  </Card>
+  <Card title="List categories" icon="list" href="/api/product-categories/management#list-categories">
+    Get all product categories or filter by place
+  </Card>
+  <Card title="Get by ID" icon="fingerprint" href="/api/product-categories/management#get-category-by-id">
+    Retrieve a specific category by ID
+  </Card>
+  <Card title="Get by slug" icon="link" href="/api/product-categories/management#get-category-by-slug">
+    Retrieve a category by URL-friendly slug
+  </Card>
+  <Card title="Update category" icon="pen" href="/api/product-categories/management#update-category">
+    Update an existing category
+  </Card>
+  <Card title="Delete category" icon="trash" href="/api/product-categories/management#delete-category">
+    Remove a product category
+  </Card>
+</CardGroup>
+
+## Product category structure
+
+```typescript
+interface ProductCategory {
+  id: string;
+  name: string;
+  slug: string;
+  place: Place;
+  products: Product[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+<ParamField path="id" type="string">
+  Unique identifier for the category
+</ParamField>
+
+<ParamField path="name" type="string">
+  Display name of the category (e.g., "Main Courses", "Beverages")
+</ParamField>
+
+<ParamField path="slug" type="string">
+  URL-friendly identifier generated from the name
+</ParamField>
+
+<ParamField path="place" type="Place">
+  The place this category belongs to
+</ParamField>
+
+<ParamField path="products" type="Product[]">
+  Array of products in this category
+</ParamField>
+
+## Use cases
+
+### Restaurant menu organization
+
+```json
+{
+  "place": "Kofi's Kitchen",
+  "categories": [
+    {
+      "name": "Appetizers",
+      "products": ["Spring Rolls", "Samosas"]
+    },
+    {
+      "name": "Main Courses",
+      "products": ["Jollof Rice", "Grilled Tilapia"]
+    },
+    {
+      "name": "Beverages",
+      "products": ["Fresh Juice", "Soft Drinks"]
+    }
+  ]
+}
+```
+
+### Pharmacy inventory
+
+```json
+{
+  "place": "MedPlus Pharmacy",
+  "categories": [
+    {
+      "name": "Pain Relief",
+      "products": ["Paracetamol", "Ibuprofen"]
+    },
+    {
+      "name": "Antibiotics",
+      "products": ["Amoxicillin", "Azithromycin"]
+    },
+    {
+      "name": "Vitamins",
+      "products": ["Multivitamin", "Vitamin C"]
+    }
+  ]
+}
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Category Management" icon="folder" href="/api/product-categories/management">
+    View all category endpoints and operations
+  </Card>
+  <Card title="Products API" icon="box" href="/api/products/overview">
+    Learn how products are linked to categories
+  </Card>
+  <Card title="Places API" icon="store" href="/api/places/overview">
+    Understand place structure and multi-tenancy
+  </Card>
+</CardGroup>

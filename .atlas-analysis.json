@@ -120,7 +120,7 @@
     "Digital wallet system for managing transactions",
     "Rating and review system for service quality",
     "Analytics and reporting for business insights",
-    "SMS notifications via Twilio integration",
+    "SMS notifications via Arkesel integration",
     "PDF invoice generation for bookings"
   ],
   "publicApiSurface": [
